@@ -1,0 +1,109 @@
+---
+# UI Schema for expand_volume_linux
+# Auto-generated and managed by Schema Builder
+# Last updated: 5/28/2026, 6:13:02 PM
+
+uploads_enabled: false
+
+fields:
+  - name: target_hosts
+    type: text
+    label: "Target Hosts"
+    description: "Hosts or groups to execute this playbook against. Populated automatically from the host picker in Ansible UI. Manual runs: supply -e \"target_hosts=hostname_or_group\"."
+    required: true
+    protected: true
+  - name: target_disk
+    type: text
+    label: "Target Disk"
+    required: true
+  - name: target_size_gb
+    type: number
+    label: "Target Size Gb"
+    required: true
+  - name: target_mount
+    type: text
+    label: "Target Mount"
+    required: true
+  - name: operation_mode
+    type: select
+    label: "Operation Mode"
+    required: true
+    default: "create"
+    options:
+      - "create"
+      - "expand"
+
+advanced_fields:
+  - name: filesystem_type
+    type: select
+    label: "Filesystem Type"
+    default: "xfs"
+    options:
+      - "xfs"
+      - "ext4"
+      - "btrfs"
+  - name: vg_name
+    type: text
+    label: "Vg Name"
+    default: "vg_data"
+  - name: lv_name
+    type: text
+    label: "Lv Name"
+    default: "lv_data"
+  - name: use_remaining_disk_space
+    type: checkbox
+    label: "Use Remaining Disk Space"
+  - name: mount_options
+    type: text
+    label: "Mount Options"
+    default: "defaults"
+  - name: partition_table
+    type: select
+    label: "Partition Table"
+    default: "gpt"
+    options:
+      - "gpt"
+      - "msdos"
+  - name: online_resize
+    type: checkbox
+    label: "Online Resize"
+  - name: fail_if_mount_exists
+    type: checkbox
+    label: "Fail If Mount Exists"
+  - name: fail_if_vg_exists
+    type: checkbox
+    label: "Fail If Vg Exists"
+  - name: enable_fs_validation
+    type: checkbox
+    label: "Enable Fs Validation"
+  - name: enable_logging
+    type: checkbox
+    label: "Enable Logging"
+  - name: log_file
+    type: text
+    label: "Log File"
+    default: "/var/log/ansible-lvm.log"
+  - name: partition_device
+    type: text
+    label: "Partition Device"
+  - name: existing_vg_name
+    type: text
+    label: "Existing Vg Name"
+  - name: mount_info
+    type: text
+    label: "Mount Info"
+  - name: existing_vg
+    type: text
+    label: "Existing Vg"
+  - name: partition_name
+    type: text
+    label: "Partition Name"
+  - name: free_space_gb
+    type: text
+    label: "Free Space Gb"
+  - name: vg_name_cmd
+    type: text
+    label: "Vg Name Cmd"
+  - name: ansible_mounts
+    type: text
+    label: "Ansible Mounts"

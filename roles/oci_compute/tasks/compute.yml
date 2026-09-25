@@ -1,0 +1,35 @@
+---
+# key_by matches an existing instance by compartment + AD + name, so re-runs
+# return it unchanged. Shape, image and size changes are NOT applied to an
+# existing instance; replace the instance to change them.
+- name: "Ensure Compute instance exists: {{ oci_compute_name }}"
+  oracle.oci.oci_compute_instance:
+    compartment_id: "{{ oci_compartment_id }}"
+    availability_domain: "{{ oci_availability_domain }}"
+    display_name: "{{ oci_compute_name }}"
+    shape: "{{ oci_compute_shape }}"
+    shape_config:
+      ocpus: "{{ oci_compute_ocpus | float }}"
+      memory_in_gbs: "{{ oci_compute_memory_gb | float }}"
+    source_details:
+      source_type: image
+      image_id: "{{ oci_compute_image_id }}"
+      boot_volume_size_in_gbs: "{{ oci_compute_boot_volume_gb | int }}"
+    create_vnic_details:
+      subnet_id: "{{ oci_compute_subnet_id }}"
+      assign_public_ip: "{{ oci_compute_assign_public_ip | bool }}"
+      hostname_label: "{{ oci_compute_hostname_label }}"
+      display_name: "{{ oci_compute_name }}-vnic"
+    metadata:
+      ssh_authorized_keys: "{{ oci_ssh_public_key }}"
+    freeform_tags: "{{ oci_freeform_tags }}"
+    key_by:
+      - compartment_id
+      - availability_domain
+      - display_name
+    state: present
+  register: oci_compute_instance
+
+- name: Record the instance OCID
+  ansible.builtin.set_fact:
+    oci_compute_instance_id: "{{ oci_compute_instance.instance.id }}"

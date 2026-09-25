@@ -1,0 +1,16 @@
+---
+# key_by makes the module match an existing VCN by compartment + name instead of
+# by every attribute, so re-runs return the existing VCN rather than creating one.
+- name: "Ensure VCN exists: {{ oci_vcn_name }}"
+  oracle.oci.oci_network_vcn:
+    compartment_id: "{{ oci_compartment_id }}"
+    display_name: "{{ oci_vcn_name }}"
+    cidr_blocks:
+      - "{{ oci_vcn_cidr }}"
+    dns_label: "{{ oci_vcn_dns_label }}"
+    freeform_tags: "{{ oci_freeform_tags }}"
+    key_by:
+      - compartment_id
+      - display_name
+    state: present
+  register: oci_network_vcn

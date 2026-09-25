@@ -1,0 +1,3 @@
+---
+# OCI API calls are applied synchronously by the oracle.oci modules, so this
+# role has nothing to run on change. Kept so the role layout stays uniform.

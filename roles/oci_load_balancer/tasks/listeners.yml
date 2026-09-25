@@ -1,0 +1,49 @@
+---
+- name: Ensure HTTP-to-HTTPS redirect rule set exists
+  oracle.oci.oci_loadbalancer_rule_set:
+    load_balancer_id: "{{ oci_load_balancer.load_balancer.id }}"
+    name: "{{ oci_lb_redirect_rule_set_name }}"
+    items:
+      - action: REDIRECT
+        description: "Redirect all HTTP requests to HTTPS"
+        conditions:
+          - attribute_name: PATH
+            attribute_value: "/"
+            operator: FORCE_LONGEST_PREFIX_MATCH
+        redirect_uri:
+          protocol: "HTTPS"
+          port: "{{ oci_lb_https_port | int }}"
+          host: "{host}"
+          path: "{path}"
+          query: "{query}"
+        response_code: 301
+    state: present
+  when: oci_lb_http_redirect_to_https | bool
+
+# TLS terminates here with the supplied certificate; traffic to the backend is
+# plain HTTP inside the VCN.
+- name: "Ensure HTTPS listener exists: {{ oci_lb_https_listener_name }}"
+  oracle.oci.oci_loadbalancer_listener:
+    load_balancer_id: "{{ oci_load_balancer.load_balancer.id }}"
+    name: "{{ oci_lb_https_listener_name }}"
+    default_backend_set_name: "{{ oci_lb_backend_set_name }}"
+    port: "{{ oci_lb_https_port | int }}"
+    protocol: "HTTP"
+    ssl_configuration:
+      certificate_ids:
+        - "{{ oci_lb_certificate_ocid }}"
+      protocols: "{{ oci_lb_ssl_protocols }}"
+      cipher_suite_name: "{{ oci_lb_ssl_cipher_suite_name }}"
+      server_order_preference: ENABLED
+      verify_peer_certificate: false
+    state: present
+
+- name: "Ensure HTTP listener exists: {{ oci_lb_http_listener_name }}"
+  oracle.oci.oci_loadbalancer_listener:
+    load_balancer_id: "{{ oci_load_balancer.load_balancer.id }}"
+    name: "{{ oci_lb_http_listener_name }}"
+    default_backend_set_name: "{{ oci_lb_backend_set_name }}"
+    port: "{{ oci_lb_http_port | int }}"
+    protocol: "HTTP"
+    rule_set_names: "{{ [oci_lb_redirect_rule_set_name] if oci_lb_http_redirect_to_https | bool else [] }}"
+    state: present

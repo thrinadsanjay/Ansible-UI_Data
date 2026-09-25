@@ -1,0 +1,46 @@
+---
+# UI Schema for expand_volume_linux
+# Auto-generated and managed by Schema Builder
+# Last updated: 5/28/2026, 5:58:30 PM
+
+uploads_enabled: false
+
+fields:
+  - name: target_hosts
+    type: text
+    label: "Target Hosts"
+    description: "Hosts or groups to execute this playbook against. Populated automatically from the host picker in Ansible UI. Manual runs: supply -e \"target_hosts=hostname_or_group\"."
+    required: true
+    protected: true
+  - name: target_disk
+    type: text
+    label: "Target Disk"
+    required: true
+  - name: target_size_gb
+    type: number
+    label: "Target Size Gb"
+    required: true
+  - name: target_mount
+    type: text
+    label: "Target Mount"
+    required: true
+
+advanced_fields:
+  - name: partition_name
+    type: text
+    label: "Partition Name"
+  - name: free_space_gb
+    type: text
+    label: "Free Space Gb"
+  - name: mount_info
+    type: text
+    label: "Mount Info"
+  - name: vg_name_cmd
+    type: text
+    label: "Vg Name Cmd"
+  - name: ansible_mounts
+    type: text
+    label: "Ansible Mounts"
+  - name: vg_name
+    type: text
+    label: "Vg Name"

@@ -1,0 +1,54 @@
+---
+- name: Validate oci_network inputs
+  ansible.builtin.assert:
+    that:
+      - oci_compartment_id is match('^ocid1\.(compartment|tenancy)\.')
+      - oci_vcn_cidr is match('^(\d{1,3}\.){3}\d{1,3}/\d{1,2}$')
+      - oci_public_subnet_cidr is match('^(\d{1,3}\.){3}\d{1,3}/\d{1,2}$')
+      - oci_app_subnet_cidr is match('^(\d{1,3}\.){3}\d{1,3}/\d{1,2}$')
+      - oci_public_subnet_cidr != oci_app_subnet_cidr
+      - oci_application_port | int > 0
+    fail_msg: >-
+      oci_network: oci_compartment_id must be a compartment or tenancy OCID (got
+      '{{ oci_compartment_id }}'), and oci_vcn_cidr / oci_public_subnet_cidr /
+      oci_app_subnet_cidr must be distinct IPv4 CIDRs.
+    quiet: true
+
+- name: Validate the administrator SSH CIDR
+  ansible.builtin.assert:
+    that:
+      - oci_admin_cidr is match('^(\d{1,3}\.){3}\d{1,3}/\d{1,2}$')
+      - oci_admin_cidr != '0.0.0.0/0'
+    fail_msg: >-
+      oci_admin_cidr must be a specific IPv4 CIDR such as 198.51.100.7/32
+      (got '{{ oci_admin_cidr }}'). SSH is never opened to 0.0.0.0/0.
+      Set oci_admin_ssh_enabled=false to create no SSH rule.
+    quiet: true
+  when: oci_admin_ssh_enabled | bool
+
+- name: Create the VCN
+  ansible.builtin.import_tasks: vcn.yml
+
+- name: Create the gateways
+  ansible.builtin.import_tasks: gateways.yml
+
+- name: Create the route tables
+  ansible.builtin.import_tasks: route_tables.yml
+
+- name: Create the security lists
+  ansible.builtin.import_tasks: security.yml
+
+- name: Create the subnets
+  ansible.builtin.import_tasks: subnets.yml
+
+- name: Publish network outputs for downstream roles
+  ansible.builtin.set_fact:
+    oci_vcn_id: "{{ oci_network_vcn.vcn.id }}"
+    oci_internet_gateway_id: "{{ oci_network_internet_gateway.internet_gateway.id }}"
+    oci_nat_gateway_id: "{{ oci_network_nat_gateway.nat_gateway.id }}"
+    oci_public_route_table_id: "{{ oci_network_public_route_table.route_table.id }}"
+    oci_private_route_table_id: "{{ oci_network_private_route_table.route_table.id }}"
+    oci_lb_security_list_id: "{{ oci_network_lb_security_list.security_list.id }}"
+    oci_app_security_list_id: "{{ oci_network_app_security_list.security_list.id }}"
+    oci_public_subnet_id: "{{ oci_network_public_subnet.subnet.id }}"
+    oci_app_subnet_id: "{{ oci_network_app_subnet.subnet.id }}"

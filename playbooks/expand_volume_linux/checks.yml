@@ -1,0 +1,120 @@
+---
+# =============================================================================
+# Common Validations
+# =============================================================================
+
+- name: Validate required variables
+  ansible.builtin.assert:
+    that:
+      - target_disk | length > 0
+      - target_mount | length > 0
+      - target_size_gb | int > 0
+      - filesystem_type in ['xfs', 'ext4']
+      - operation_mode in ['create', 'expand']
+
+# =============================================================================
+# Root Disk Protection
+# =============================================================================
+
+- name: Get root filesystem source
+  ansible.builtin.command:
+    cmd: findmnt -n -o SOURCE /
+  register: root_source
+  changed_when: false
+
+- name: Get root base disk
+  ansible.builtin.shell: |
+    lsblk -no PKNAME {{ root_source.stdout }}
+  register: root_disk
+  changed_when: false
+
+- name: Fail if target disk is root disk
+  ansible.builtin.fail:
+    msg: >
+      Refusing to use root disk {{ target_disk }}
+  when:
+    - target_disk | basename == root_disk.stdout | trim
+
+# =============================================================================
+# Multipath Protection
+# =============================================================================
+
+- name: Check multipath
+  ansible.builtin.shell: |
+    multipath -ll | grep {{ target_disk | basename }}
+  register: multipath_check
+  changed_when: false
+  failed_when: false
+
+- name: Fail if disk is multipath managed
+  ansible.builtin.fail:
+    msg: >
+      Disk is multipath managed.
+      Use mapper device instead.
+  when:
+    - multipath_check.rc == 0
+
+# =============================================================================
+# Validate Disk Exists
+# =============================================================================
+
+- name: Validate disk exists
+  ansible.builtin.stat:
+    path: "{{ target_disk }}"
+  register: disk_stat
+
+- name: Fail if disk does not exist
+  ansible.builtin.fail:
+    msg: >
+      Disk {{ target_disk }} does not exist
+  when:
+    - not disk_stat.stat.exists
+
+# =============================================================================
+# Lock Protection
+# =============================================================================
+
+- name: Check lock file
+  ansible.builtin.stat:
+    path: /var/run/ansible_lvm.lock
+  register: lockfile
+
+- name: Abort if another playbook run is active
+  ansible.builtin.fail:
+    msg: >
+      Another LVM automation run is already active
+  when:
+    - lockfile.stat.exists
+
+- name: Create lock file
+  ansible.builtin.file:
+    path: /var/run/ansible_lvm.lock
+    state: touch
+    mode: "0644"
+
+# =============================================================================
+# Disk Space Validation
+# =============================================================================
+
+- name: Get disk size
+  ansible.builtin.command:
+    cmd: lsblk -b -dn -o SIZE {{ target_disk }}
+  register: disk_size
+  changed_when: false
+
+- name: Set disk size fact
+  ansible.builtin.set_fact:
+    disk_size_gb: >-
+      {{
+        (
+          disk_size.stdout | int
+        ) / 1024 / 1024 / 1024
+        | round(0, 'floor')
+      }}
+
+- name: Fail if requested size exceeds disk size
+  ansible.builtin.fail:
+    msg: >
+      Requested size exceeds disk size.
+  when:
+    - target_size_gb | int > disk_size_gb | int

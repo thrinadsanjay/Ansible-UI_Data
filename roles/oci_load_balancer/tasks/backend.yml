@@ -1,0 +1,42 @@
+---
+# Backend sets and backends are identified by name / ip:port, so these tasks
+# create them once and update them in place afterwards.
+- name: "Ensure backend set exists: {{ oci_lb_backend_set_name }}"
+  oracle.oci.oci_loadbalancer_backend_set:
+    load_balancer_id: "{{ oci_load_balancer.load_balancer.id }}"
+    name: "{{ oci_lb_backend_set_name }}"
+    policy: "{{ oci_lb_backend_policy }}"
+    health_checker:
+      protocol: "HTTP"
+      port: "{{ oci_lb_backend_port | int }}"
+      url_path: "{{ oci_lb_health_check_path }}"
+      return_code: "{{ oci_lb_health_check_return_code | int }}"
+      interval_in_millis: "{{ oci_lb_health_check_interval_ms | int }}"
+      timeout_in_millis: "{{ oci_lb_health_check_timeout_ms | int }}"
+      retries: "{{ oci_lb_health_check_retries | int }}"
+    state: present
+  register: oci_load_balancer_backend_set
+
+- name: "Ensure the backend is registered: {{ oci_lb_backend_ip_address ~ ':' ~ oci_lb_backend_port }}"
+  oracle.oci.oci_loadbalancer_backend:
+    load_balancer_id: "{{ oci_load_balancer.load_balancer.id }}"
+    backend_set_name: "{{ oci_lb_backend_set_name }}"
+    ip_address: "{{ oci_lb_backend_ip_address }}"
+    port: "{{ oci_lb_backend_port | int }}"
+    state: present
+
+# A replaced VM gets a new private IP; drop the old backend so the set only
+# contains the current instance.
+- name: Remove stale backends from {{ oci_lb_backend_set_name }}
+  oracle.oci.oci_loadbalancer_backend:
+    load_balancer_id: "{{ oci_load_balancer.load_balancer.id }}"
+    backend_set_name: "{{ oci_lb_backend_set_name }}"
+    ip_address: "{{ item.ip_address }}"
+    port: "{{ item.port }}"
+    state: absent
+  loop: "{{ oci_load_balancer_backend_set.backend_set.backends | default([]) }}"
+  loop_control:
+    label: "{{ item.ip_address }}:{{ item.port }}"
+  when: >-
+    item.ip_address != oci_lb_backend_ip_address
+    or item.port | int != oci_lb_backend_port | int

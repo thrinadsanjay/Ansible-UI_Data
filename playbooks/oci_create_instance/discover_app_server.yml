@@ -1,0 +1,20 @@
+---
+# Adds the existing OCI VM to the "app_server" group so configuration
+# playbooks can run on their own. Read-only; skipped when the group already has
+# a host (added earlier in the same run, or listed in inventory/hosts.yml).
+
+- name: Discover the OCI application server
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  # oracle.oci reads credentials from ~/.oci/config; these select the profile and region.
+  environment:
+    OCI_CONFIG_PROFILE: "{{ oci_config_profile }}"
+    OCI_REGION: "{{ oci_region }}"
+
+  tasks:
+    - name: Add the running Compute instance to the inventory
+      ansible.builtin.include_role:
+        name: oci_compute
+        tasks_from: discover.yml
+      when: groups['app_server'] | default([]) | length == 0

@@ -1,0 +1,34 @@
+---
+- name: Validate oci_compute inputs
+  ansible.builtin.assert:
+    that:
+      - oci_compartment_id is match('^ocid1\.(compartment|tenancy)\.')
+      - oci_availability_domain | length > 0
+      - "'REPLACE_ME' not in oci_availability_domain"
+      - oci_compute_image_id is match('^ocid1\.image\.')
+      - oci_compute_subnet_id is match('^ocid1\.subnet\.')
+      - oci_ssh_public_key is match('^(ssh-(ed25519|rsa)|ecdsa-sha2-nistp\d+) ')
+      - oci_compute_ocpus | float > 0
+      - oci_compute_memory_gb | float > 0
+      - oci_compute_boot_volume_gb | int >= 50
+    fail_msg: >-
+      oci_compute: set oci_compartment_id, oci_availability_domain,
+      oci_compute_image_id (ocid1.image...), oci_ssh_public_key (an OpenSSH
+      public key) and a boot volume of at least 50 GB. oci_compute_subnet_id
+      comes from oci_network (run it first) or must be set to an ocid1.subnet OCID.
+    quiet: true
+
+- name: Validate inventory registration settings
+  ansible.builtin.assert:
+    that:
+      - oci_compute_server_name | length > 0
+      - "'REPLACE_ME' not in oci_compute_server_name"
+    fail_msg: "Set oci_compute_server_name: the inventory name for the new VM in group {{ oci_compute_inventory_group }}."
+    quiet: true
+  when: oci_compute_add_host | bool
+
+- name: Create the Compute instance
+  ansible.builtin.import_tasks: compute.yml
+
+- name: Publish the instance addresses and register the host
+  ansible.builtin.import_tasks: register_host.yml

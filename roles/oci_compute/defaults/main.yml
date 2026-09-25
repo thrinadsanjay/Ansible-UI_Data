@@ -1,0 +1,34 @@
+---
+# --- Required (no safe default) ---------------------------------------------
+oci_compartment_id: ""
+oci_availability_domain: ""
+oci_compute_image_id: ""
+oci_ssh_public_key: ""
+# Subnet for the primary VNIC. Defaults to the app subnet published by oci_network.
+oci_compute_subnet_id: "{{ oci_app_subnet_id | default('') }}"
+
+# --- Instance ----------------------------------------------------------------
+oci_compute_name: "app-server"
+oci_compute_hostname_label: "{{ oci_compute_name }}"
+oci_compute_shape: "VM.Standard.A1.Flex"
+oci_compute_ocpus: 2
+oci_compute_memory_gb: 12
+oci_compute_boot_volume_gb: 50
+# Needs a subnet that allows public IPs (oci_app_subnet_public: true).
+oci_compute_assign_public_ip: true
+
+oci_freeform_tags:
+  managed_by: "ansible"
+
+# --- Inventory registration (ansible.builtin.add_host) -----------------------
+oci_compute_add_host: true
+oci_compute_inventory_group: "app_server"
+oci_compute_server_name: "{{ oci_compute_name }}"
+oci_compute_ssh_user: "ubuntu"
+oci_compute_ssh_private_key_file: "~/.ssh/id_ed25519"
+# Trust a new host key on first contact but still fail if a known key changes.
+# With OCI Bastion, append a ProxyCommand here.
+oci_compute_ssh_common_args: "-o StrictHostKeyChecking=accept-new"
+# Wait until the new VM accepts SSH before later plays connect to it.
+oci_compute_wait_for_ssh: true
+oci_compute_wait_for_ssh_timeout: 600

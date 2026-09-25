@@ -1,0 +1,27 @@
+---
+- name: "Ensure Internet Gateway exists: {{ oci_internet_gateway_name }}"
+  oracle.oci.oci_network_internet_gateway:
+    compartment_id: "{{ oci_compartment_id }}"
+    vcn_id: "{{ oci_network_vcn.vcn.id }}"
+    display_name: "{{ oci_internet_gateway_name }}"
+    is_enabled: true
+    freeform_tags: "{{ oci_freeform_tags }}"
+    key_by:
+      - compartment_id
+      - vcn_id
+      - display_name
+    state: present
+  register: oci_network_internet_gateway
+
+- name: "Ensure NAT Gateway exists: {{ oci_nat_gateway_name }}"
+  oracle.oci.oci_network_nat_gateway:
+    compartment_id: "{{ oci_compartment_id }}"
+    vcn_id: "{{ oci_network_vcn.vcn.id }}"
+    display_name: "{{ oci_nat_gateway_name }}"
+    freeform_tags: "{{ oci_freeform_tags }}"
+    key_by:
+      - compartment_id
+      - vcn_id
+      - display_name
+    state: present
+  register: oci_network_nat_gateway

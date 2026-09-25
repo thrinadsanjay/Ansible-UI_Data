@@ -1,0 +1,63 @@
+---
+# =============================================================================
+# Environment configuration (non-secret)
+# Values marked REPLACE_ME must be set before running any playbook; the roles
+# refuse to call the OCI API while a placeholder is still present.
+# OCI credentials are NOT set here: the oracle.oci modules read ~/.oci/config.
+# =============================================================================
+
+# --- OCI account -------------------------------------------------------------
+# Profile in ~/.oci/config used for API credentials; oci_region overrides its region.
+oci_config_profile: "DEFAULT"
+oci_region: "ap-hyderabad-1"
+oci_compartment_id: "REPLACE_ME"          # ocid1.compartment.oc1..xxxx
+oci_availability_domain: "REPLACE_ME"     # e.g. "AbCd:AP-HYDERABAD-1-AD-1"
+
+oci_freeform_tags:
+  project: "finance-tracker"
+  managed_by: "ansible"
+
+# --- Network -----------------------------------------------------------------
+oci_vcn_name: "finance-tracker-vcn"
+oci_vcn_dns_label: "fintrackvcn"
+oci_vcn_cidr: "10.20.0.0/16"
+oci_public_subnet_cidr: "10.20.10.0/24"   # Load Balancer subnet
+oci_app_subnet_cidr: "10.20.20.0/24"      # Application subnet
+oci_application_port: 8000
+
+# CIDR allowed to SSH to the VM, e.g. "198.51.100.7/32". 0.0.0.0/0 is rejected.
+oci_admin_cidr: "REPLACE_ME"
+
+# true  = app subnet allows public IPs and routes through the Internet Gateway
+#         (initial setup: Ansible connects to the VM's public IP).
+# false = private app subnet routed through the NAT Gateway (use OCI Bastion).
+oci_app_subnet_public: true
+
+# --- Compute -----------------------------------------------------------------
+oci_compute_name: "finance-tracker-app"
+oci_compute_image_id: "REPLACE_ME"        # Ubuntu aarch64 image OCID for your region
+oci_compute_shape: "VM.Standard.A1.Flex"
+oci_compute_ocpus: 2
+oci_compute_memory_gb: 12
+oci_compute_boot_volume_gb: 50
+oci_compute_assign_public_ip: "{{ oci_app_subnet_public }}"
+
+oci_ssh_public_key_file: "~/.ssh/id_ed25519.pub"
+oci_ssh_public_key: "{{ lookup('ansible.builtin.file', oci_ssh_public_key_file) }}"
+
+# Inventory entry created for the VM (group: app_server).
+oci_compute_server_name: "REPLACE_ME"     # e.g. "fintrack-prod-01"
+oci_compute_ssh_user: "ubuntu"
+oci_compute_ssh_private_key_file: "~/.ssh/id_ed25519"
+
+# --- Load Balancer -----------------------------------------------------------
+oci_lb_name: "finance-tracker-lb"
+oci_lb_min_bandwidth_mbps: 10
+oci_lb_max_bandwidth_mbps: 10
+oci_lb_backend_port: "{{ oci_application_port }}"
+oci_lb_health_check_path: "/health"
+oci_lb_certificate_ocid: "REPLACE_ME"     # ocid1.certificate.oc1.ap-hyderabad-1.xxxx
+
+# --- Docker ------------------------------------------------------------------
+docker_users:
+  - "{{ oci_compute_ssh_user }}"

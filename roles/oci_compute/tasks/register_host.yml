@@ -1,0 +1,40 @@
+---
+# Expects oci_compute_instance_id. Publishes the instance addresses and adds the
+# VM to the in-memory inventory for later plays in the same run.
+- name: Look up the instance VNIC attachment
+  oracle.oci.oci_compute_vnic_attachment_facts:
+    compartment_id: "{{ oci_compartment_id }}"
+    instance_id: "{{ oci_compute_instance_id }}"
+  register: oci_compute_vnic_attachments
+
+- name: Read the primary VNIC
+  oracle.oci.oci_network_vnic_facts:
+    vnic_id: >-
+      {{ (oci_compute_vnic_attachments.vnic_attachments
+          | selectattr('lifecycle_state', 'equalto', 'ATTACHED') | first).vnic_id }}
+  register: oci_compute_vnic
+
+- name: Publish Compute outputs for downstream roles
+  ansible.builtin.set_fact:
+    oci_compute_private_ip: "{{ oci_compute_vnic.vnic.private_ip }}"
+    oci_compute_public_ip: "{{ oci_compute_vnic.vnic.public_ip | default('', true) }}"
+
+- name: "Add the VM to the inventory group: {{ oci_compute_inventory_group }}"
+  ansible.builtin.add_host:
+    name: "{{ oci_compute_server_name }}"
+    groups: "{{ oci_compute_inventory_group }}"
+    # Public IP while it exists; the private IP once you connect through OCI Bastion.
+    ansible_host: "{{ oci_compute_public_ip if oci_compute_public_ip | length > 0 else oci_compute_private_ip }}"
+    ansible_user: "{{ oci_compute_ssh_user }}"
+    ansible_ssh_private_key_file: "{{ oci_compute_ssh_private_key_file }}"
+    ansible_ssh_common_args: "{{ oci_compute_ssh_common_args }}"
+  changed_when: false
+  when: oci_compute_add_host | bool
+
+- name: Wait for SSH on {{ oci_compute_server_name }}
+  ansible.builtin.wait_for_connection:
+    timeout: "{{ oci_compute_wait_for_ssh_timeout | int }}"
+  delegate_to: "{{ oci_compute_server_name }}"
+  when:
+    - oci_compute_add_host | bool
+    - oci_compute_wait_for_ssh | bool

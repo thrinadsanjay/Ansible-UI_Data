@@ -1,0 +1,11 @@
+---
+# Finance Tracker settings for the application server.
+# Secrets come from vault.yml in this directory (see vault.yml.example).
+
+fintracker_app_port: "{{ oci_application_port }}"
+fintracker_base_url: "REPLACE_ME"          # e.g. "https://fin.example.com"
+fintracker_default_admin_email: "REPLACE_ME"
+
+fintracker_session_secret: "{{ vault_fintracker_session_secret | default('') }}"
+fintracker_default_admin_password: "{{ vault_fintracker_default_admin_password | default('') }}"
+fintracker_mongo_express_password: "{{ vault_fintracker_mongo_express_password | default('') }}"

@@ -1,0 +1,180 @@
+---
+# =============================================================================
+# EXPAND MODE
+# =============================================================================
+
+- name: Expand filesystem stack
+  block:
+
+    # =========================================================================
+    # Validate Mount
+    # =========================================================================
+
+    - name: Get mount information
+      ansible.builtin.set_fact:
+        mount_info: >-
+          {{
+            ansible_mounts
+            | selectattr('mount', 'equalto', target_mount)
+            | list
+            | first
+          }}
+
+    - name: Fail if mount does not exist
+      ansible.builtin.fail:
+        msg: >
+          Mount point does not exist
+      when:
+        - mount_info is not defined
+          or mount_info == ""
+
+    - name: Validate filesystem type
+      ansible.builtin.command:
+        cmd: lsblk -no TYPE {{ mount_info.device }}
+      register: device_type
+      changed_when: false
+
+    - name: Fail if filesystem is not LVM-backed
+      ansible.builtin.fail:
+        msg: >
+          Filesystem is not LVM-backed
+      when:
+        - "'lvm' not in device_type.stdout"
+
+    # =========================================================================
+    # Get Existing VG
+    # =========================================================================
+
+    - name: Get existing VG
+      ansible.builtin.command:
+        cmd: lvs --noheadings -o vg_name {{ mount_info.device }}
+      register: existing_vg
+      changed_when: false
+
+    - name: Set existing VG
+      ansible.builtin.set_fact:
+        existing_vg_name: "{{ existing_vg.stdout | trim }}"
+
+    - name: Validate VG
+      ansible.builtin.fail:
+        msg: >
+          Existing mount does not belong to requested VG
+      when:
+        - existing_vg_name != vg_name
+
+    # =========================================================================
+    # Partition Discovery
+    # =========================================================================
+
+    - name: Find reusable partition
+      ansible.builtin.shell: |
+        for part in $(lsblk -ln -o NAME {{ target_disk }} | tail -n +2); do
+
+          FULL_PART="/dev/${part}"
+
+          VG_NAME=$(pvs --noheadings -o vg_name ${FULL_PART} 2>/dev/null | xargs)
+
+          PART_SIZE=$(lsblk -b -dn -o SIZE ${FULL_PART})
+          PART_SIZE_GB=$((PART_SIZE / 1024 / 1024 / 1024))
+
+          if [ -z "${VG_NAME}" ] && \
+             [ "${PART_SIZE_GB}" -eq "{{ target_size_gb }}" ]; then
+            echo "${FULL_PART}"
+            exit 0
+          fi
+
+        done
+      register: reusable_partition
+      changed_when: false
+      failed_when: false
+
+    - name: Set reusable partition
+      ansible.builtin.set_fact:
+        partition_device: "{{ reusable_partition.stdout | trim }}"
+
+    # =========================================================================
+    # Create New Partition
+    # =========================================================================
+
+    - name: Create partition
+      when:
+        - partition_device | length == 0
+      block:
+
+        - name: Get partition count
+          ansible.builtin.shell: |
+            lsblk -ln {{ target_disk }} | grep part | wc -l
+          register: partition_count
+          changed_when: false
+
+        - name: Set partition number
+          ansible.builtin.set_fact:
+            partition_number: >-
+              {{
+                (
+                  partition_count.stdout
+                  | default('0')
+                  | trim
+                  | int
+                ) + 1
+              }}
+
+        - name: Set partition device
+          ansible.builtin.set_fact:
+            partition_device: >-
+              {{
+                target_disk ~ partition_number
+                if 'nvme' not in target_disk
+                else target_disk ~ 'p' ~ partition_number
+              }}
+
+        - name: Create GPT label
+          community.general.parted:
+            device: "{{ target_disk }}"
+            label: gpt
+            state: present
+
+        - name: Create LVM partition
+          community.general.parted:
+            device: "{{ target_disk }}"
+            number: "{{ partition_number }}"
+            state: present
+            part_start: "1MiB"
+            part_end: "{{ target_size_gb }}GiB"
+            flags:
+              - lvm
+
+        - name: Reload partition table
+          ansible.builtin.command:
+            cmd: partprobe {{ target_disk }}
+          changed_when: false
+
+        - name: Wait for partition device
+          ansible.builtin.wait_for:
+            path: "{{ partition_device }}"
+            timeout: 20
+
+    # =========================================================================
+    # Extend VG/LV
+    # =========================================================================
+
+    - name: Extend VG
+      community.general.lvg:
+        vg: "{{ existing_vg_name }}"
+        pvs:
+          - "{{ partition_device }}"
+        pvresize: true
+
+    - name: Extend LV and filesystem
+      community.general.lvol:
+        vg: "{{ existing_vg_name }}"
+        lv: "{{ mount_info.device | basename }}"
+        size: "+100%FREE"
+        resizefs: true
+
+  always:
+
+    - name: Remove lock file
+      ansible.builtin.file:
+        path: /var/run/ansible_lvm.lock
+        state: absent

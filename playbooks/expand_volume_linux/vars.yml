@@ -1,0 +1,98 @@
+---
+# =============================================================================
+# vars.yml
+# Description: Variables for create/expand LVM playbook
+# =============================================================================
+
+# ============================================================================
+# Required Variables
+# ============================================================================
+
+# Target disk to use
+# Examples:
+#   /dev/sdb
+#   /dev/nvme1n1
+target_disk: "/dev/sdb"
+
+# Requested size in GB
+target_size_gb: 50
+
+# Mount point to create or expand
+target_mount: "/data"
+
+# ============================================================================
+# Filesystem Configuration
+# ============================================================================
+
+# Supported:
+#   xfs
+#   ext4
+filesystem_type: "xfs"
+
+# ============================================================================
+# LVM Configuration
+# ============================================================================
+
+# Volume Group name
+vg_name: "vg_data"
+
+# Logical Volume name
+lv_name: "lv_data"
+
+# ============================================================================
+# Operation Mode
+# ============================================================================
+
+# Supported values:
+#   create
+#   expand
+#
+# NOTE:
+# - create → Creates new filesystem/mount point
+# - expand → Expands existing LVM filesystem
+operation_mode: "create"
+
+# ============================================================================
+# Optional Settings
+# ============================================================================
+
+# Create partition using all remaining free disk space
+# true  = use full remaining disk
+# false = use target_size_gb only
+use_remaining_disk_space: false
+
+# Filesystem mount options
+mount_options: "defaults"
+
+# ============================================================================
+# Advanced Options
+# ============================================================================
+
+# Partition table type
+# Supported:
+#   gpt
+#   msdos
+partition_table: "gpt"
+
+# Enable online filesystem resize
+online_resize: true
+
+# ============================================================================
+# Safety Controls
+# ============================================================================
+
+# Fail if mount point already exists during create mode
+fail_if_mount_exists: true
+
+# Fail if VG already exists during create mode
+fail_if_vg_exists: false
+
+# Enable filesystem validation checks
+enable_fs_validation: true
+
+# ============================================================================
+# Logging
+# ============================================================================
+
+enable_logging: true
+log_file: "/var/log/ansible-lvm.log"

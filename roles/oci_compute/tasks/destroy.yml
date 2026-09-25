@@ -1,0 +1,18 @@
+---
+- name: Look up instance {{ oci_compute_name }}
+  oracle.oci.oci_compute_instance_facts:
+    compartment_id: "{{ oci_compartment_id }}"
+    display_name: "{{ oci_compute_name }}"
+  register: oci_compute_destroy_instances
+
+- name: "Terminate instance and its boot volume: {{ oci_compute_name }}"
+  oracle.oci.oci_compute_instance:
+    instance_id: "{{ item.id }}"
+    preserve_boot_volume: false
+    state: absent
+  loop: >-
+    {{ oci_compute_destroy_instances.instances
+       | selectattr('display_name', 'equalto', oci_compute_name)
+       | rejectattr('lifecycle_state', 'in', ['TERMINATED', 'TERMINATING']) }}
+  loop_control:
+    label: "{{ item.display_name }} ({{ item.lifecycle_state }})"

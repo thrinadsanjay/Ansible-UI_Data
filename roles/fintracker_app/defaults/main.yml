@@ -1,0 +1,30 @@
+---
+# --- Source ------------------------------------------------------------------
+# The FinTrack "main" branch holds only docker-compose.yml, env.example and README;
+# the application image is pulled from Docker Hub.
+fintracker_repo_url: "https://github.com/thrinadsanjay/FinTrack.git"
+fintracker_repo_version: "main"
+fintracker_install_dir: "/opt/fintracker"
+
+# --- Images ------------------------------------------------------------------
+fintracker_image_version: "latest"      # automationbuilder/fintracker tag (FINTRACKER_VERSION)
+fintracker_mongo_image_tag: "8.0"       # pin MongoDB's major version
+# missing: pull only absent images. Use "always" to fetch a new "latest".
+fintracker_pull_policy: "missing"
+
+# --- Application settings ----------------------------------------------------
+# Host port the app is published on; must equal the Load Balancer backend port.
+fintracker_app_port: 8000
+fintracker_base_url: ""
+fintracker_default_admin_username: "admin"
+fintracker_default_admin_email: ""
+# Any other env.example settings, e.g. {FT_SMTP_ENABLED: "true"}.
+fintracker_extra_env: {}
+
+# --- Secrets (set from Ansible Vault) ----------------------------------------
+fintracker_session_secret: ""
+fintracker_default_admin_password: ""
+fintracker_mongo_express_password: ""
+
+fintracker_health_check_retries: 30
+fintracker_health_check_delay: 10

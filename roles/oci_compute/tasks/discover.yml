@@ -1,0 +1,40 @@
+---
+# Read-only: finds the running instance by name and registers it in the
+# inventory, so configuration playbooks can run without re-provisioning.
+- name: Validate discovery inputs
+  ansible.builtin.assert:
+    that:
+      - oci_compartment_id is match('^ocid1\.(compartment|tenancy)\.')
+      - "'REPLACE_ME' not in oci_compute_server_name"
+    fail_msg: "Set oci_compartment_id and oci_compute_server_name to discover the application server."
+    quiet: true
+
+- name: Look up running instance {{ oci_compute_name }}
+  oracle.oci.oci_compute_instance_facts:
+    compartment_id: "{{ oci_compartment_id }}"
+    display_name: "{{ oci_compute_name }}"
+    lifecycle_state: RUNNING
+  register: oci_compute_discovered
+
+- name: Fail unless exactly one running instance matches
+  ansible.builtin.assert:
+    that:
+      - oci_compute_running | length == 1
+    fail_msg: >-
+      Expected exactly one RUNNING instance named '{{ oci_compute_name }}' in the
+      compartment, found {{ oci_compute_running | length }}.
+      Run playbooks/01_provision_oci.yml first.
+    quiet: true
+  vars:
+    oci_compute_running: >-
+      {{ oci_compute_discovered.instances | selectattr('display_name', 'equalto', oci_compute_name)
+         | selectattr('lifecycle_state', 'equalto', 'RUNNING') | list }}
+
+- name: Record the instance OCID
+  ansible.builtin.set_fact:
+    oci_compute_instance_id: >-
+      {{ (oci_compute_discovered.instances | selectattr('display_name', 'equalto', oci_compute_name)
+          | selectattr('lifecycle_state', 'equalto', 'RUNNING') | first).id }}
+
+- name: Publish the instance addresses and register the host
+  ansible.builtin.import_tasks: register_host.yml

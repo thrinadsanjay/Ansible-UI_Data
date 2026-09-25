@@ -1,0 +1,102 @@
+---
+# =============================================================================
+# Playbook: expand_volume_linux
+# Description: Enterprise-grade LVM create/expand automation
+# Author: Sanjay Ch
+# =============================================================================
+
+- name: expand_volume_linux - Main Playbook
+
+  hosts: "{{ target_hosts }}"
+  become: true
+  gather_facts: true
+
+  vars_files:
+    - vars.yml
+
+  pre_tasks:
+
+    - name: Abort if target_hosts is not defined
+      ansible.builtin.fail:
+        msg: >
+          target_hosts is required.
+      when:
+        - target_hosts is not defined
+          or target_hosts | length == 0
+
+  tasks:
+
+    # =========================================================================
+    # Common Checks
+    # =========================================================================
+
+    - name: Run common validations
+      ansible.builtin.include_tasks:
+        file: checks.yml
+
+    # =========================================================================
+    # Create Mode
+    # =========================================================================
+
+    - name: Run create workflow
+      ansible.builtin.include_tasks:
+        file: create.yml
+      when:
+        - operation_mode == 'create'
+
+    # =========================================================================
+    # Expand Mode
+    # =========================================================================
+
+    - name: Run expand workflow
+      ansible.builtin.include_tasks:
+        file: expand.yml
+      when:
+        - operation_mode == 'expand'
+
+    # =========================================================================
+    # Final Validation
+    # =========================================================================
+
+    - name: Validate mountpoint
+      ansible.builtin.command:
+        cmd: mountpoint {{ target_mount }}
+      register: mount_validation
+      changed_when: false
+
+    - name: Fail if mount validation fails
+      ansible.builtin.fail:
+        msg: >
+          Mount validation failed
+      when:
+        - mount_validation.rc != 0
+
+    - name: Validate fstab entry
+      ansible.builtin.shell: |
+        grep "{{ target_mount }}" /etc/fstab
+      register: fstab_check
+      changed_when: false
+
+    - name: Fail if fstab entry missing
+      ansible.builtin.fail:
+        msg: >
+          fstab validation failed
+      when:
+        - fstab_check.rc != 0
+
+    - name: Verify filesystem size
+      ansible.builtin.command:
+        cmd: df -h {{ target_mount }}
+      register: final_df
+      changed_when: false
+
+    - name: Display filesystem details
+      ansible.builtin.debug:
+        var: final_df.stdout_lines
+
+  handlers:
+
+    - name: remove_lockfile
+      ansible.builtin.file:
+        path: /var/run/ansible_lvm.lock
+        state: absent

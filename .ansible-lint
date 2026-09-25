@@ -1,0 +1,9 @@
+---
+# Roles publish their outputs as shared oci_* facts (oci_vcn_id, oci_compute_private_ip, ...)
+# that downstream roles consume. That is the project naming contract, so the
+# "prefix every role variable with the role name" check does not apply.
+skip_list:
+  - var-naming[no-role-prefix]
+exclude_paths:
+  - playbooks/expand_volume_linux/
+  - roles/lvm_manager/

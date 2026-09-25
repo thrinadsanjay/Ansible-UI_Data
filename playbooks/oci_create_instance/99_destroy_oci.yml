@@ -1,0 +1,52 @@
+---
+# Deletes the whole environment:
+#   Load Balancer -> Compute -> subnets -> route tables -> security lists -> gateways -> VCN
+# Boot volume and all data on the VM are deleted. Refuses to run unless
+# confirm_destroy=true is passed explicitly.
+#
+#   ansible-playbook playbooks/99_destroy_oci.yml -e confirm_destroy=true
+
+- name: Destroy OCI infrastructure
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  # oracle.oci reads credentials from ~/.oci/config; these select the profile and region.
+  environment:
+    OCI_CONFIG_PROFILE: "{{ oci_config_profile }}"
+    OCI_REGION: "{{ oci_region }}"
+
+  vars:
+    confirm_destroy: false
+
+  pre_tasks:
+    - name: Require explicit confirmation
+      ansible.builtin.assert:
+        that:
+          - confirm_destroy | bool
+        fail_msg: >-
+          This deletes the Load Balancer, the VM '{{ oci_compute_name }}' with its
+          boot volume, and VCN '{{ oci_vcn_name }}'. Re-run with -e confirm_destroy=true.
+        quiet: true
+
+    - name: Validate the target compartment
+      ansible.builtin.assert:
+        that:
+          - oci_compartment_id is match('^ocid1\.(compartment|tenancy)\.')
+        fail_msg: "oci_compartment_id must be a compartment OCID, got '{{ oci_compartment_id }}'."
+        quiet: true
+
+  tasks:
+    - name: Delete the Load Balancer
+      ansible.builtin.include_role:
+        name: oci_load_balancer
+        tasks_from: destroy.yml
+
+    - name: Terminate the Compute instance
+      ansible.builtin.include_role:
+        name: oci_compute
+        tasks_from: destroy.yml
+
+    - name: Delete the network
+      ansible.builtin.include_role:
+        name: oci_network
+        tasks_from: destroy.yml

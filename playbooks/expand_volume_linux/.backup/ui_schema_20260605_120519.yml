@@ -1,0 +1,169 @@
+---
+# UI Blueprint for expand_volume_linux
+# Auto-generated and managed by UI Blueprint Builder
+# Last updated: 6/5/2026, 3:39:19 PM
+
+playbook_display_name: "Expand Volume Linux"
+description: "Enterprise-grade LVM create/expand automation"
+metadata:
+  classification: ""
+  application: "Linux"
+  tags: "os"
+  version: ""
+  author: "Sanjay Ch"
+  execution_type: ""
+  supported_platforms: ""
+  documentation_url: ""
+  summary: ""
+  group_order:
+    - "Disk"
+    - "disk"
+    - "Storage"
+ai_configuration:
+  ai_summary: ""
+  intent_keywords: ""
+  execution_examples: ""
+  variable_explanations: ""
+  suggested_prompts: ""
+  playbook_purpose: ""
+
+uploads_enabled: false
+
+fields:
+  - name: target_hosts
+    type: text
+    label: "Target Hosts"
+    description: "Hosts or groups to execute this playbook against. Populated automatically from the host picker in Ansible UI. Manual runs: supply -e \"target_hosts=hostname_or_group\"."
+    required: true
+    protected: true
+  - name: operation_mode
+    type: select
+    label: "Operation Mode"
+    required: true
+    field_width: "small"
+    default: "create"
+    options:
+      - "create"
+      - "expand"
+  - name: target_mount
+    type: text
+    label: "Target Mount"
+    required: true
+    help_text: "Enter the mount point Eg: \"/var/data\""
+    field_width: "small"
+  - name: target_disk
+    type: text
+    label: "Target Disk"
+    required: true
+    help_text: "Select the Disk"
+    field_width: "small"
+  - name: target_size_gb
+    type: number
+    label: "Target Size Gb"
+  - name: vg_name
+    type: text
+    label: "Vg Name"
+    field_width: "small"
+    default: "vg_data"
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "equals"
+        value: "create"
+  - name: lv_name
+    type: text
+    label: "Lv Name"
+    field_width: "small"
+    default: "lv_data"
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "equals"
+        value: "create"
+
+advanced_fields:
+  - name: filesystem_type
+    type: select
+    label: "Filesystem Type"
+    advanced: true
+    default: "xfs"
+    options:
+      - "xfs"
+      - "ext4"
+      - "btrfs"
+  - name: use_remaining_disk_space
+    type: checkbox
+    label: "Use Remaining Disk Space"
+    advanced: true
+  - name: mount_options
+    type: text
+    label: "Mount Options"
+    advanced: true
+    default: "defaults"
+  - name: partition_table
+    type: select
+    label: "Partition Table"
+    advanced: true
+    default: "gpt"
+    options:
+      - "gpt"
+      - "msdos"
+  - name: online_resize
+    type: checkbox
+    label: "Online Resize"
+    advanced: true
+  - name: fail_if_mount_exists
+    type: checkbox
+    label: "Fail If Mount Exists"
+    advanced: true
+  - name: fail_if_vg_exists
+    type: checkbox
+    label: "Fail If Vg Exists"
+    advanced: true
+  - name: enable_fs_validation
+    type: checkbox
+    label: "Enable Fs Validation"
+    advanced: true
+  - name: enable_logging
+    type: checkbox
+    label: "Enable Logging"
+    advanced: true
+  - name: log_file
+    type: text
+    label: "Log File"
+    advanced: true
+    default: "/var/log/ansible-lvm.log"
+  - name: partition_device
+    type: text
+    label: "Partition Device"
+    advanced: true
+  - name: existing_vg_name
+    type: text
+    label: "Existing Vg Name"
+    advanced: true
+  - name: mount_info
+    type: text
+    label: "Mount Info"
+    advanced: true
+  - name: existing_vg
+    type: text
+    label: "Existing Vg"
+    advanced: true
+  - name: partition_name
+    type: text
+    label: "Partition Name"
+    advanced: true
+  - name: free_space_gb
+    type: text
+    label: "Free Space Gb"
+    advanced: true
+  - name: vg_name_cmd
+    type: text
+    label: "Vg Name Cmd"
+    advanced: true
+  - name: ansible_mounts
+    type: text
+    label: "Ansible Mounts"
+    advanced: true

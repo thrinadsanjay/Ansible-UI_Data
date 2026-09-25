@@ -1,0 +1,16 @@
+---
+galaxy_info:
+  role_name: fintracker_app
+  author: Sanjay Ch
+  description: Deploys the Finance Tracker Docker Compose stack
+  license: MIT
+  min_ansible_version: "2.17"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+
+# Needs Docker with the Compose plugin on the host (the docker role). Not
+# declared as a dependency so OS configuration and deployment stay separate.
+dependencies: []

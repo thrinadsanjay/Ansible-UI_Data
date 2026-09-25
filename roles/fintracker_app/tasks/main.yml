@@ -1,0 +1,57 @@
+---
+- name: Validate Finance Tracker settings
+  ansible.builtin.assert:
+    that:
+      - fintracker_base_url is match('^https?://')
+      - fintracker_default_admin_email is match('^[^@\s]+@[^@\s]+$')
+      - fintracker_session_secret | length >= 32
+      - fintracker_default_admin_password | length >= 12
+      - fintracker_mongo_express_password | length >= 12
+      - "'REPLACE_ME' not in (fintracker_session_secret ~ fintracker_default_admin_password ~ fintracker_mongo_express_password)"
+    fail_msg: >-
+      Set fintracker_base_url and fintracker_default_admin_email, and put the
+      secrets in the vault (inventory/group_vars/app_server/vault.yml): a session
+      secret of 32+ characters and admin / mongo-express passwords of 12+ characters.
+    quiet: true
+  no_log: true
+
+- name: Install git
+  ansible.builtin.package:
+    name: git
+    state: present
+
+- name: Check out the deployment bundle
+  ansible.builtin.git:
+    repo: "{{ fintracker_repo_url }}"
+    version: "{{ fintracker_repo_version }}"
+    dest: "{{ fintracker_install_dir }}"
+    depth: 1
+    single_branch: true
+
+- name: Write the environment file
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ fintracker_install_dir }}/.env"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+# Compose recreates only the containers whose configuration (image, .env) changed.
+- name: Start the Finance Tracker stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ fintracker_install_dir }}"
+    state: present
+    pull: "{{ fintracker_pull_policy }}"
+    remove_orphans: true
+    wait: true
+    wait_timeout: 600
+
+- name: Wait for the application health endpoint
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ fintracker_app_port }}/health"
+    status_code: 200
+  register: fintracker_health
+  until: fintracker_health.status == 200
+  retries: "{{ fintracker_health_check_retries | int }}"
+  delay: "{{ fintracker_health_check_delay | int }}"

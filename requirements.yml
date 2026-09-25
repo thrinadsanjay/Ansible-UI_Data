@@ -1,0 +1,8 @@
+---
+# Install with: ansible-galaxy collection install -r requirements.yml
+# Versions are pinned to the major releases this project was validated against.
+collections:
+  - name: oracle.oci
+    version: ">=5.5.0,<6.0.0"
+  - name: community.docker
+    version: ">=5.0.0,<6.0.0"

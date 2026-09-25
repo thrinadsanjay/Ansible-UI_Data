@@ -1,0 +1,45 @@
+---
+# Route tables are looked up by name and updated in place when they exist, so a
+# changed rule is applied to the existing table instead of creating a second one.
+- name: Look up existing route tables in the VCN
+  oracle.oci.oci_network_route_table_facts:
+    compartment_id: "{{ oci_compartment_id }}"
+    vcn_id: "{{ oci_network_vcn.vcn.id }}"
+    lifecycle_state: AVAILABLE
+  register: oci_network_existing_route_tables
+
+- name: "Ensure public route table exists: {{ oci_public_route_table_name }}"
+  oracle.oci.oci_network_route_table:
+    rt_id: >-
+      {{ oci_network_existing_route_tables.route_tables
+         | selectattr('display_name', 'equalto', oci_public_route_table_name)
+         | map(attribute='id') | first | default(omit) }}
+    compartment_id: "{{ oci_compartment_id }}"
+    vcn_id: "{{ oci_network_vcn.vcn.id }}"
+    display_name: "{{ oci_public_route_table_name }}"
+    route_rules:
+      - description: "Default route to the Internet Gateway"
+        destination: "0.0.0.0/0"
+        destination_type: CIDR_BLOCK
+        network_entity_id: "{{ oci_network_internet_gateway.internet_gateway.id }}"
+    freeform_tags: "{{ oci_freeform_tags }}"
+    state: present
+  register: oci_network_public_route_table
+
+- name: "Ensure private route table exists: {{ oci_private_route_table_name }}"
+  oracle.oci.oci_network_route_table:
+    rt_id: >-
+      {{ oci_network_existing_route_tables.route_tables
+         | selectattr('display_name', 'equalto', oci_private_route_table_name)
+         | map(attribute='id') | first | default(omit) }}
+    compartment_id: "{{ oci_compartment_id }}"
+    vcn_id: "{{ oci_network_vcn.vcn.id }}"
+    display_name: "{{ oci_private_route_table_name }}"
+    route_rules:
+      - description: "Default route to the NAT Gateway"
+        destination: "0.0.0.0/0"
+        destination_type: CIDR_BLOCK
+        network_entity_id: "{{ oci_network_nat_gateway.nat_gateway.id }}"
+    freeform_tags: "{{ oci_freeform_tags }}"
+    state: present
+  register: oci_network_private_route_table

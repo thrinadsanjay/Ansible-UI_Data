@@ -1,0 +1,15 @@
+---
+galaxy_info:
+  role_name: oci_load_balancer
+  author: Sanjay Ch
+  description: Public flexible OCI Load Balancer with TLS termination
+  license: MIT
+  min_ansible_version: "2.17"
+  platforms:
+    - name: GenericLinux
+      versions:
+        - all
+
+# Consumes oci_public_subnet_id (oci_network) and oci_compute_private_ip
+# (oci_compute) from earlier roles in the play. No hard role dependency.
+dependencies: []

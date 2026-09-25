@@ -1,0 +1,46 @@
+---
+# --- Required (no safe default) ---------------------------------------------
+oci_compartment_id: ""
+# CIDR allowed to reach the VM on SSH. Required while oci_admin_ssh_enabled is true.
+oci_admin_cidr: ""
+
+# --- VCN ---------------------------------------------------------------------
+oci_vcn_name: "app-vcn"
+oci_vcn_cidr: "10.20.0.0/16"
+oci_vcn_dns_label: "appvcn"
+
+# --- Subnets -----------------------------------------------------------------
+oci_public_subnet_name: "{{ oci_vcn_name }}-lb-subnet"
+oci_public_subnet_cidr: "10.20.10.0/24"
+oci_public_subnet_dns_label: "lb"
+
+oci_app_subnet_name: "{{ oci_vcn_name }}-app-subnet"
+oci_app_subnet_cidr: "10.20.20.0/24"
+oci_app_subnet_dns_label: "app"
+# true:  VNICs in the app subnet may have public IPs; 0.0.0.0/0 routes to the Internet Gateway.
+# false: private subnet; 0.0.0.0/0 routes to the NAT Gateway (reach the VM through OCI Bastion).
+# OCI cannot change "prohibit public IP" on an existing subnet; see README before flipping it.
+oci_app_subnet_public: true
+
+# --- Gateways and route tables -----------------------------------------------
+oci_internet_gateway_name: "{{ oci_vcn_name }}-igw"
+oci_nat_gateway_name: "{{ oci_vcn_name }}-natgw"
+oci_public_route_table_name: "{{ oci_vcn_name }}-public-rt"
+oci_private_route_table_name: "{{ oci_vcn_name }}-private-rt"
+
+# --- Security lists ----------------------------------------------------------
+oci_lb_security_list_name: "{{ oci_vcn_name }}-lb-sl"
+oci_app_security_list_name: "{{ oci_vcn_name }}-app-sl"
+
+# Port the application listens on; only the Load Balancer subnet may reach it.
+oci_application_port: 8000
+# Listener ports opened on the Load Balancer subnet, and who may reach them.
+oci_lb_http_port: 80
+oci_lb_https_port: 443
+oci_lb_ingress_cidr: "0.0.0.0/0"
+
+oci_admin_ssh_enabled: true
+oci_ssh_port: 22
+
+oci_freeform_tags:
+  managed_by: "ansible"

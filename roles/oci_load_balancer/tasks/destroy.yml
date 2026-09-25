@@ -1,0 +1,19 @@
+---
+# Deleting the Load Balancer also deletes its listeners, rule sets, backend
+# sets and backends.
+- name: Look up Load Balancer {{ oci_lb_name }}
+  oracle.oci.oci_loadbalancer_load_balancer_facts:
+    compartment_id: "{{ oci_compartment_id }}"
+    display_name: "{{ oci_lb_name }}"
+  register: oci_load_balancer_destroy_lbs
+
+- name: Delete Load Balancer {{ oci_lb_name }}
+  oracle.oci.oci_loadbalancer_load_balancer:
+    load_balancer_id: "{{ item.id }}"
+    state: absent
+  loop: >-
+    {{ oci_load_balancer_destroy_lbs.load_balancers
+       | selectattr('display_name', 'equalto', oci_lb_name)
+       | rejectattr('lifecycle_state', 'in', ['DELETED', 'DELETING']) }}
+  loop_control:
+    label: "{{ item.display_name }} ({{ item.lifecycle_state }})"

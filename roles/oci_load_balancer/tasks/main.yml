@@ -1,0 +1,41 @@
+---
+- name: Validate oci_load_balancer inputs
+  ansible.builtin.assert:
+    that:
+      - oci_compartment_id is match('^ocid1\.(compartment|tenancy)\.')
+      - oci_lb_certificate_ocid is match('^ocid1\.certificate\.')
+      - oci_lb_subnet_id is match('^ocid1\.subnet\.')
+      - oci_lb_min_bandwidth_mbps | int >= 10
+      - oci_lb_max_bandwidth_mbps | int >= oci_lb_min_bandwidth_mbps | int
+    fail_msg: >-
+      oci_load_balancer: oci_lb_certificate_ocid must be an OCI Certificates
+      service OCID (ocid1.certificate...), got '{{ oci_lb_certificate_ocid }}';
+      oci_lb_subnet_id comes from oci_network (run it first); bandwidth must be
+      at least 10 Mbps with max >= min.
+    quiet: true
+
+- name: Validate the backend address is private
+  ansible.builtin.assert:
+    that:
+      - oci_lb_backend_ip_address is match('^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)')
+    fail_msg: >-
+      oci_lb_backend_ip_address must be the Compute instance's private IP
+      (oci_compute_private_ip from oci_compute), got '{{ oci_lb_backend_ip_address }}'.
+    quiet: true
+
+- name: Create the Load Balancer
+  ansible.builtin.import_tasks: load_balancer.yml
+
+- name: Create the backend set and backend
+  ansible.builtin.import_tasks: backend.yml
+
+- name: Create the listeners
+  ansible.builtin.import_tasks: listeners.yml
+
+- name: Publish Load Balancer outputs
+  ansible.builtin.set_fact:
+    oci_load_balancer_id: "{{ oci_load_balancer.load_balancer.id }}"
+    oci_load_balancer_public_ip: >-
+      {{ oci_load_balancer.load_balancer.ip_addresses
+         | selectattr('is_public') | map(attribute='ip_address') | first }}
+    oci_load_balancer_backend_set_name: "{{ oci_lb_backend_set_name }}"

@@ -1,0 +1,49 @@
+---
+# Subnets are looked up by name and updated in place (route table, security
+# lists). CIDR, DNS label and "prohibit public IP" are fixed once created.
+- name: Look up existing subnets in the VCN
+  oracle.oci.oci_network_subnet_facts:
+    compartment_id: "{{ oci_compartment_id }}"
+    vcn_id: "{{ oci_network_vcn.vcn.id }}"
+    lifecycle_state: AVAILABLE
+  register: oci_network_existing_subnets
+
+- name: "Ensure Load Balancer subnet exists: {{ oci_public_subnet_name }}"
+  oracle.oci.oci_network_subnet:
+    subnet_id: >-
+      {{ oci_network_existing_subnets.subnets
+         | selectattr('display_name', 'equalto', oci_public_subnet_name)
+         | map(attribute='id') | first | default(omit) }}
+    compartment_id: "{{ oci_compartment_id }}"
+    vcn_id: "{{ oci_network_vcn.vcn.id }}"
+    display_name: "{{ oci_public_subnet_name }}"
+    cidr_block: "{{ oci_public_subnet_cidr }}"
+    dns_label: "{{ oci_public_subnet_dns_label }}"
+    prohibit_public_ip_on_vnic: false
+    route_table_id: "{{ oci_network_public_route_table.route_table.id }}"
+    security_list_ids:
+      - "{{ oci_network_lb_security_list.security_list.id }}"
+    freeform_tags: "{{ oci_freeform_tags }}"
+    state: present
+  register: oci_network_public_subnet
+
+- name: "Ensure application subnet exists: {{ oci_app_subnet_name }}"
+  oracle.oci.oci_network_subnet:
+    subnet_id: >-
+      {{ oci_network_existing_subnets.subnets
+         | selectattr('display_name', 'equalto', oci_app_subnet_name)
+         | map(attribute='id') | first | default(omit) }}
+    compartment_id: "{{ oci_compartment_id }}"
+    vcn_id: "{{ oci_network_vcn.vcn.id }}"
+    display_name: "{{ oci_app_subnet_name }}"
+    cidr_block: "{{ oci_app_subnet_cidr }}"
+    dns_label: "{{ oci_app_subnet_dns_label }}"
+    prohibit_public_ip_on_vnic: "{{ not (oci_app_subnet_public | bool) }}"
+    route_table_id: >-
+      {{ oci_network_public_route_table.route_table.id if oci_app_subnet_public | bool
+         else oci_network_private_route_table.route_table.id }}
+    security_list_ids:
+      - "{{ oci_network_app_security_list.security_list.id }}"
+    freeform_tags: "{{ oci_freeform_tags }}"
+    state: present
+  register: oci_network_app_subnet

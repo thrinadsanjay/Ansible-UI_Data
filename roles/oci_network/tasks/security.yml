@@ -1,0 +1,105 @@
+---
+# Traffic model:
+#   Internet      -> LB subnet   : TCP oci_lb_http_port / oci_lb_https_port
+#   LB subnet     -> app subnet  : TCP oci_application_port (the app is never exposed to the Internet)
+#   oci_admin_cidr -> app subnet : TCP 22 (optional, for Ansible / OCI Bastion)
+# The VCN's default security list (which allows SSH from anywhere) is never
+# attached to these subnets.
+- name: Look up existing security lists in the VCN
+  oracle.oci.oci_network_security_list_facts:
+    compartment_id: "{{ oci_compartment_id }}"
+    vcn_id: "{{ oci_network_vcn.vcn.id }}"
+    lifecycle_state: AVAILABLE
+  register: oci_network_existing_security_lists
+
+- name: "Ensure Load Balancer security list exists: {{ oci_lb_security_list_name }}"
+  oracle.oci.oci_network_security_list:
+    security_list_id: >-
+      {{ oci_network_existing_security_lists.security_lists
+         | selectattr('display_name', 'equalto', oci_lb_security_list_name)
+         | map(attribute='id') | first | default(omit) }}
+    compartment_id: "{{ oci_compartment_id }}"
+    vcn_id: "{{ oci_network_vcn.vcn.id }}"
+    display_name: "{{ oci_lb_security_list_name }}"
+    ingress_security_rules:
+      - description: "HTTPS to the Load Balancer"
+        protocol: "6"
+        source: "{{ oci_lb_ingress_cidr }}"
+        source_type: CIDR_BLOCK
+        tcp_options:
+          destination_port_range:
+            min: "{{ oci_lb_https_port | int }}"
+            max: "{{ oci_lb_https_port | int }}"
+      - description: "HTTP to the Load Balancer (redirected to HTTPS)"
+        protocol: "6"
+        source: "{{ oci_lb_ingress_cidr }}"
+        source_type: CIDR_BLOCK
+        tcp_options:
+          destination_port_range:
+            min: "{{ oci_lb_http_port | int }}"
+            max: "{{ oci_lb_http_port | int }}"
+    egress_security_rules:
+      - description: "Load Balancer to application backends"
+        protocol: "6"
+        destination: "{{ oci_app_subnet_cidr }}"
+        destination_type: CIDR_BLOCK
+        tcp_options:
+          destination_port_range:
+            min: "{{ oci_application_port | int }}"
+            max: "{{ oci_application_port | int }}"
+    freeform_tags: "{{ oci_freeform_tags }}"
+    state: present
+  register: oci_network_lb_security_list
+
+- name: "Ensure application security list exists: {{ oci_app_security_list_name }}"
+  oracle.oci.oci_network_security_list:
+    security_list_id: >-
+      {{ oci_network_existing_security_lists.security_lists
+         | selectattr('display_name', 'equalto', oci_app_security_list_name)
+         | map(attribute='id') | first | default(omit) }}
+    compartment_id: "{{ oci_compartment_id }}"
+    vcn_id: "{{ oci_network_vcn.vcn.id }}"
+    display_name: "{{ oci_app_security_list_name }}"
+    ingress_security_rules: >-
+      {{ oci_network_app_ingress_rules
+         + (oci_network_ssh_ingress_rules if oci_admin_ssh_enabled | bool else []) }}
+    egress_security_rules:
+      - description: "Outbound for OS updates and container image pulls"
+        protocol: "all"
+        destination: "0.0.0.0/0"
+        destination_type: CIDR_BLOCK
+    freeform_tags: "{{ oci_freeform_tags }}"
+    state: present
+  vars:
+    oci_network_app_ingress_rules:
+      - description: "Application traffic from the Load Balancer subnet only"
+        protocol: "6"
+        source: "{{ oci_public_subnet_cidr }}"
+        source_type: CIDR_BLOCK
+        tcp_options:
+          destination_port_range:
+            min: "{{ oci_application_port | int }}"
+            max: "{{ oci_application_port | int }}"
+      - description: "ICMP path MTU discovery"
+        protocol: "1"
+        source: "0.0.0.0/0"
+        source_type: CIDR_BLOCK
+        icmp_options:
+          type: 3
+          code: 4
+      - description: "ICMP destination unreachable within the VCN"
+        protocol: "1"
+        source: "{{ oci_vcn_cidr }}"
+        source_type: CIDR_BLOCK
+        icmp_options:
+          type: 3
+    oci_network_ssh_ingress_rules:
+      - description: "SSH from the administrator CIDR"
+        protocol: "6"
+        source: "{{ oci_admin_cidr }}"
+        source_type: CIDR_BLOCK
+        tcp_options:
+          destination_port_range:
+            min: "{{ oci_ssh_port | int }}"
+            max: "{{ oci_ssh_port | int }}"
+  register: oci_network_app_security_list

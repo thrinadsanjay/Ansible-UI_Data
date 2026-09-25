@@ -1,0 +1,289 @@
+---
+# =============================================================================
+# CREATE MODE
+# =============================================================================
+
+- name: Create filesystem stack
+  block:
+
+    # =========================================================================
+    # Mount Validation
+    # =========================================================================
+
+    - name: Check existing mount
+      ansible.builtin.set_fact:
+        existing_mount: >-
+          {{
+            ansible_mounts
+            | selectattr('mount', 'equalto', target_mount)
+            | list
+          }}
+
+    - name: Fail if mount already exists
+      ansible.builtin.fail:
+        msg: >
+          Mount point already exists
+      when:
+        - existing_mount | length > 0
+
+    # =========================================================================
+    # Existing Directory Handling
+    # =========================================================================
+
+    - name: Check mount directory
+      ansible.builtin.stat:
+        path: "{{ target_mount }}"
+      register: mount_dir_stat
+
+    - name: Capture permissions
+      ansible.builtin.stat:
+        path: "{{ target_mount }}"
+      register: mount_dir_permissions
+      when:
+        - mount_dir_stat.stat.exists
+
+    - name: Check directory content
+      ansible.builtin.find:
+        paths: "{{ target_mount }}"
+        hidden: true
+        recurse: false
+      register: existing_files
+      when:
+        - mount_dir_stat.stat.exists
+
+    - name: Set migration flag
+      ansible.builtin.set_fact:
+        migrate_existing_data: >-
+          {{
+            existing_files.matched
+            | default(0)
+            | int > 0
+          }}
+
+    # =========================================================================
+    # Open File Validation
+    # =========================================================================
+
+    - name: Check open files
+      ansible.builtin.command:
+        cmd: lsof +D {{ target_mount }}
+      register: open_files
+      changed_when: false
+      failed_when: false
+      when:
+        - migrate_existing_data
+
+    - name: Fail if open files exist
+      ansible.builtin.fail:
+        msg: |
+          Open files detected:
+
+          {{ open_files.stdout }}
+      when:
+        - migrate_existing_data
+        - open_files.rc == 0
+        - open_files.stdout | length > 0
+
+    # =========================================================================
+    # Backup Existing Directory
+    # =========================================================================
+
+    - name: Rename existing directory
+      ansible.builtin.command:
+        cmd: mv {{ target_mount }} {{ target_mount }}_bkp
+      when:
+        - migrate_existing_data
+
+    - name: Create fresh mount directory
+      ansible.builtin.file:
+        path: "{{ target_mount }}"
+        state: directory
+        owner: >-
+          {{
+            mount_dir_permissions.stat.pw_name
+            | default('root')
+          }}
+        group: >-
+          {{
+            mount_dir_permissions.stat.gr_name
+            | default('root')
+          }}
+        mode: >-
+          {{
+            mount_dir_permissions.stat.mode
+            | default('0755')
+          }}
+
+    # =========================================================================
+    # Partition Discovery
+    # =========================================================================
+
+    - name: Find reusable partition
+      ansible.builtin.shell: |
+        for part in $(lsblk -ln -o NAME {{ target_disk }} | tail -n +2); do
+
+          FULL_PART="/dev/${part}"
+
+          VG_NAME=$(pvs --noheadings -o vg_name ${FULL_PART} 2>/dev/null | xargs)
+
+          PART_SIZE=$(lsblk -b -dn -o SIZE ${FULL_PART})
+          PART_SIZE_GB=$((PART_SIZE / 1024 / 1024 / 1024))
+
+          if [ -z "${VG_NAME}" ] && \
+             [ "${PART_SIZE_GB}" -eq "{{ target_size_gb }}" ]; then
+            echo "${FULL_PART}"
+            exit 0
+          fi
+
+        done
+      register: reusable_partition
+      changed_when: false
+      failed_when: false
+
+    - name: Set reusable partition
+      ansible.builtin.set_fact:
+        partition_device: "{{ reusable_partition.stdout | trim }}"
+
+    # =========================================================================
+    # Create New Partition
+    # =========================================================================
+
+    - name: Create partition
+      when:
+        - partition_device | length == 0
+      block:
+
+        - name: Get partition count
+          ansible.builtin.shell: |
+            lsblk -ln {{ target_disk }} | grep part | wc -l
+          register: partition_count
+          changed_when: false
+
+        - name: Set partition number
+          ansible.builtin.set_fact:
+            partition_number: >-
+              {{
+                (
+                  partition_count.stdout
+                  | default('0')
+                  | trim
+                  | int
+                ) + 1
+              }}
+
+        - name: Set partition device
+          ansible.builtin.set_fact:
+            partition_device: >-
+              {{
+                target_disk ~ partition_number
+                if 'nvme' not in target_disk
+                else target_disk ~ 'p' ~ partition_number
+              }}
+
+        - name: Create GPT label
+          community.general.parted:
+            device: "{{ target_disk }}"
+            label: gpt
+            state: present
+
+        - name: Create LVM partition
+          community.general.parted:
+            device: "{{ target_disk }}"
+            number: "{{ partition_number }}"
+            state: present
+            part_start: "1MiB"
+            part_end: "{{ target_size_gb }}GiB"
+            flags:
+              - lvm
+
+        - name: Reload partition table
+          ansible.builtin.command:
+            cmd: partprobe {{ target_disk }}
+          changed_when: false
+
+        - name: Wait for partition device
+          ansible.builtin.wait_for:
+            path: "{{ partition_device }}"
+            timeout: 20
+
+    # =========================================================================
+    # VG/LV/FS Creation
+    # =========================================================================
+
+    - name: Create or extend VG
+      community.general.lvg:
+        vg: "{{ vg_name }}"
+        pvs:
+          - "{{ partition_device }}"
+        pvresize: true
+
+    - name: Create logical volume
+      community.general.lvol:
+        vg: "{{ vg_name }}"
+        lv: "{{ lv_name }}"
+        size: "100%FREE"
+
+    - name: Create filesystem
+      community.general.filesystem:
+        fstype: "{{ filesystem_type }}"
+        dev: "/dev/{{ vg_name }}/{{ lv_name }}"
+
+    - name: Get UUID
+      ansible.builtin.command:
+        cmd: blkid -s UUID -o value /dev/{{ vg_name }}/{{ lv_name }}
+      register: filesystem_uuid
+      changed_when: false
+
+    # =========================================================================
+    # Mount Filesystem
+    # =========================================================================
+
+    - name: Mount filesystem
+      ansible.posix.mount:
+        path: "{{ target_mount }}"
+        src: "UUID={{ filesystem_uuid.stdout }}"
+        fstype: "{{ filesystem_type }}"
+        opts: "{{ mount_options }}"
+        state: mounted
+
+    # =========================================================================
+    # Restore Data
+    # =========================================================================
+
+    - name: Restore data
+      ansible.builtin.command:
+        cmd: >-
+          rsync -aHAX
+          {{ target_mount }}_bkp/
+          {{ target_mount }}/
+      when:
+        - migrate_existing_data
+
+    - name: Restore SELinux contexts
+      ansible.builtin.command:
+        cmd: restorecon -RF {{ target_mount }}
+      changed_when: false
+      when:
+        - ansible_selinux.status == "enabled"
+
+    - name: Remove backup directory
+      ansible.builtin.file:
+        path: "{{ target_mount }}_bkp"
+        state: absent
+      when:
+        - migrate_existing_data
+
+  rescue:
+
+    - name: Restore backup directory
+      ansible.builtin.command:
+        cmd: mv {{ target_mount }}_bkp {{ target_mount }}
+      when:
+        - migrate_existing_data | default(false)
+
+  always:
+
+    - name: Remove lock file
+      ansible.builtin.file:
+        path: /var/run/ansible_lvm.lock
+        state: absent

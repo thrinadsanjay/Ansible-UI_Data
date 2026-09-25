@@ -1,0 +1,36 @@
+---
+# Official Docker CE repository, per https://docs.docker.com/engine/install/ubuntu/
+- name: Configure the Docker apt repository
+  when: ansible_facts.os_family == 'Debian'
+  block:
+    - name: Remove distribution packages that conflict with Docker CE
+      ansible.builtin.apt:
+        name: "{{ docker_conflicting_packages }}"
+        state: absent
+
+    - name: Install repository prerequisites
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - python3-debian  # required by deb822_repository
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Add the Docker apt repository
+      ansible.builtin.deb822_repository:
+        name: docker
+        types: deb
+        uris: "https://download.docker.com/linux/{{ ansible_facts.distribution | lower }}"
+        suites: "{{ ansible_facts.distribution_release }}"
+        components: "{{ docker_repo_channel }}"
+        architectures: "{{ {'aarch64': 'arm64', 'x86_64': 'amd64'}[ansible_facts.architecture] | default(ansible_facts.architecture) }}"
+        signed_by: "https://download.docker.com/linux/{{ ansible_facts.distribution | lower }}/gpg"
+        state: present
+      register: docker_apt_repository
+
+    # Inline, not a handler: install.yml needs the fresh cache in this same run.
+    - name: Refresh the apt cache after adding the repository  # noqa: no-handler
+      ansible.builtin.apt:
+        update_cache: true
+      when: docker_apt_repository is changed

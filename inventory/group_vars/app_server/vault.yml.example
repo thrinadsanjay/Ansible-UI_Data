@@ -1,0 +1,11 @@
+---
+# Template for inventory/group_vars/app_server/vault.yml (git-ignored).
+#
+#   cp vault.yml.example vault.yml
+#   # edit the values
+#   ansible-vault encrypt inventory/group_vars/app_server/vault.yml
+#
+# Generate a session secret with: openssl rand -hex 32
+vault_fintracker_session_secret: "REPLACE_ME"
+vault_fintracker_default_admin_password: "REPLACE_ME"
+vault_fintracker_mongo_express_password: "REPLACE_ME"

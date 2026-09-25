@@ -1,0 +1,39 @@
+---
+# --- Required (no safe default) ---------------------------------------------
+oci_compartment_id: ""
+# OCI Certificates service certificate for the HTTPS listener (ocid1.certificate...).
+oci_lb_certificate_ocid: ""
+# Inputs published by oci_network and oci_compute when they run earlier in the play.
+oci_lb_subnet_id: "{{ oci_public_subnet_id | default('') }}"
+# Always the private IP: the backend is reached over the VCN, never the Internet.
+oci_lb_backend_ip_address: "{{ oci_compute_private_ip | default('') }}"
+
+# --- Load Balancer -----------------------------------------------------------
+oci_lb_name: "app-lb"
+oci_lb_min_bandwidth_mbps: 10
+oci_lb_max_bandwidth_mbps: 10
+
+# --- Backend set and health check --------------------------------------------
+oci_lb_backend_set_name: "app_backend_set"
+oci_lb_backend_policy: "ROUND_ROBIN"
+oci_lb_backend_port: 8000
+oci_lb_health_check_path: "/health"
+oci_lb_health_check_return_code: 200
+oci_lb_health_check_interval_ms: 10000
+oci_lb_health_check_timeout_ms: 3000
+oci_lb_health_check_retries: 3
+
+# --- Listeners ---------------------------------------------------------------
+oci_lb_https_listener_name: "https_listener"
+oci_lb_https_port: 443
+oci_lb_http_listener_name: "http_listener"
+oci_lb_http_port: 80
+# Answer plain HTTP with a 301 redirect to HTTPS instead of serving the app.
+oci_lb_http_redirect_to_https: true
+oci_lb_redirect_rule_set_name: "http_to_https"
+oci_lb_ssl_protocols:
+  - "TLSv1.2"
+oci_lb_ssl_cipher_suite_name: "oci-modern-ssl-cipher-suite-v1"
+
+oci_freeform_tags:
+  managed_by: "ansible"

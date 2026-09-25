@@ -1,0 +1,105 @@
+---
+# Deletes the network created by this role, in dependency order:
+# subnets -> route tables -> security lists -> NAT Gateway -> Internet Gateway -> VCN.
+# Only resources whose display names this role manages are deleted.
+# Run it only after the Load Balancer and Compute instance are gone.
+- name: Look up VCN {{ oci_vcn_name }}
+  oracle.oci.oci_network_vcn_facts:
+    compartment_id: "{{ oci_compartment_id }}"
+    display_name: "{{ oci_vcn_name }}"
+    lifecycle_state: AVAILABLE
+  register: oci_network_destroy_vcns
+
+- name: Delete network resources
+  when: oci_network_destroy_vcns.vcns | selectattr('display_name', 'equalto', oci_vcn_name) | list | length > 0
+  vars:
+    oci_network_destroy_vcn_id: >-
+      {{ (oci_network_destroy_vcns.vcns | selectattr('display_name', 'equalto', oci_vcn_name) | first).id }}
+  block:
+    - name: Look up subnets
+      oracle.oci.oci_network_subnet_facts:
+        compartment_id: "{{ oci_compartment_id }}"
+        vcn_id: "{{ oci_network_destroy_vcn_id }}"
+        lifecycle_state: AVAILABLE
+      register: oci_network_destroy_subnets
+
+    - name: Delete subnets
+      oracle.oci.oci_network_subnet:
+        subnet_id: "{{ item.id }}"
+        state: absent
+      loop: >-
+        {{ oci_network_destroy_subnets.subnets
+           | selectattr('display_name', 'in', [oci_public_subnet_name, oci_app_subnet_name]) }}
+      loop_control:
+        label: "{{ item.display_name }}"
+
+    - name: Look up route tables
+      oracle.oci.oci_network_route_table_facts:
+        compartment_id: "{{ oci_compartment_id }}"
+        vcn_id: "{{ oci_network_destroy_vcn_id }}"
+        lifecycle_state: AVAILABLE
+      register: oci_network_destroy_route_tables
+
+    - name: Delete route tables
+      oracle.oci.oci_network_route_table:
+        rt_id: "{{ item.id }}"
+        state: absent
+      loop: >-
+        {{ oci_network_destroy_route_tables.route_tables
+           | selectattr('display_name', 'in', [oci_public_route_table_name, oci_private_route_table_name]) }}
+      loop_control:
+        label: "{{ item.display_name }}"
+
+    - name: Look up security lists
+      oracle.oci.oci_network_security_list_facts:
+        compartment_id: "{{ oci_compartment_id }}"
+        vcn_id: "{{ oci_network_destroy_vcn_id }}"
+        lifecycle_state: AVAILABLE
+      register: oci_network_destroy_security_lists
+
+    - name: Delete security lists
+      oracle.oci.oci_network_security_list:
+        security_list_id: "{{ item.id }}"
+        state: absent
+      loop: >-
+        {{ oci_network_destroy_security_lists.security_lists
+           | selectattr('display_name', 'in', [oci_lb_security_list_name, oci_app_security_list_name]) }}
+      loop_control:
+        label: "{{ item.display_name }}"
+
+    - name: Look up NAT Gateway
+      oracle.oci.oci_network_nat_gateway_facts:
+        compartment_id: "{{ oci_compartment_id }}"
+        vcn_id: "{{ oci_network_destroy_vcn_id }}"
+        display_name: "{{ oci_nat_gateway_name }}"
+        lifecycle_state: AVAILABLE
+      register: oci_network_destroy_nat_gateways
+
+    - name: Delete NAT Gateway
+      oracle.oci.oci_network_nat_gateway:
+        nat_gateway_id: "{{ item.id }}"
+        state: absent
+      loop: "{{ oci_network_destroy_nat_gateways.nat_gateways | selectattr('display_name', 'equalto', oci_nat_gateway_name) }}"
+      loop_control:
+        label: "{{ item.display_name }}"
+
+    - name: Look up Internet Gateway
+      oracle.oci.oci_network_internet_gateway_facts:
+        compartment_id: "{{ oci_compartment_id }}"
+        vcn_id: "{{ oci_network_destroy_vcn_id }}"
+        display_name: "{{ oci_internet_gateway_name }}"
+        lifecycle_state: AVAILABLE
+      register: oci_network_destroy_internet_gateways
+
+    - name: Delete Internet Gateway
+      oracle.oci.oci_network_internet_gateway:
+        ig_id: "{{ item.id }}"
+        state: absent
+      loop: "{{ oci_network_destroy_internet_gateways.internet_gateways | selectattr('display_name', 'equalto', oci_internet_gateway_name) }}"
+      loop_control:
+        label: "{{ item.display_name }}"
+
+    - name: Delete VCN {{ oci_vcn_name }}
+      oracle.oci.oci_network_vcn:
+        vcn_id: "{{ oci_network_destroy_vcn_id }}"
+        state: absent

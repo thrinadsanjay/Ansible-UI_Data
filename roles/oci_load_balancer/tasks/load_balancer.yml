@@ -1,0 +1,20 @@
+---
+# key_by matches an existing Load Balancer by compartment + name, so re-runs do
+# not create a second one. Creation takes several minutes (the module waits).
+- name: "Ensure Load Balancer exists: {{ oci_lb_name }}"
+  oracle.oci.oci_loadbalancer_load_balancer:
+    compartment_id: "{{ oci_compartment_id }}"
+    display_name: "{{ oci_lb_name }}"
+    shape_name: "flexible"
+    shape_details:
+      minimum_bandwidth_in_mbps: "{{ oci_lb_min_bandwidth_mbps | int }}"
+      maximum_bandwidth_in_mbps: "{{ oci_lb_max_bandwidth_mbps | int }}"
+    subnet_ids:
+      - "{{ oci_lb_subnet_id }}"
+    is_private: false
+    freeform_tags: "{{ oci_freeform_tags }}"
+    key_by:
+      - compartment_id
+      - display_name
+    state: present
+  register: oci_load_balancer

@@ -1,0 +1,33 @@
+---
+docker_install_compose_plugin: true
+docker_manage_service: true
+docker_service_enabled: true
+# Users added to the "docker" group (they get root-equivalent access to the host).
+docker_users: []
+
+# Release channel of the Docker CE repository: stable or test.
+docker_repo_channel: "stable"
+# Distro packages that conflict with Docker CE; removed before installing.
+docker_conflicting_packages:
+  - docker.io
+  - docker-doc
+  - docker-compose
+  - docker-compose-v2
+  - podman-docker
+  - containerd
+  - runc
+
+docker_packages:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - docker-buildx-plugin
+docker_compose_package: "docker-compose-plugin"
+
+# Written to /etc/docker/daemon.json. Rotates container logs by default; set to
+# {} to leave daemon.json unmanaged.
+docker_daemon_options:
+  log-driver: "json-file"
+  log-opts:
+    max-size: "10m"
+    max-file: "3"
