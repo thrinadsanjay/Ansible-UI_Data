@@ -11,10 +11,15 @@
       - oci_compute_ocpus | float > 0
       - oci_compute_memory_gb | float > 0
       - oci_compute_boot_volume_gb | int >= 50
+      - oci_compute_hostname_label | length == 0 or oci_compute_hostname_label is match('^[A-Za-z][A-Za-z0-9-]{0,62}$')
+      - >-
+        oci_compute_private_ip_address | length == 0
+        or oci_compute_private_ip_address is match('^(\d{1,3}\.){3}\d{1,3}$')
     fail_msg: >-
       oci_compute: set oci_compartment_id, oci_availability_domain,
       oci_compute_image_id (ocid1.image...), oci_ssh_public_key (an OpenSSH
-      public key) and a boot volume of at least 50 GB. oci_compute_subnet_id
+      public key) and a boot volume of at least 50 GB. oci_compute_hostname_label:
+      letters, digits, hyphens; oci_compute_private_ip_address: empty or an IPv4 address. oci_compute_subnet_id
       comes from oci_network (run it first) or must be set to an ocid1.subnet OCID.
     quiet: true
 

@@ -1,0 +1,77 @@
+---
+# =============================================================================
+# vars.yml
+# Description: Variables for managing groups, users and packages
+# Every key here is a UI input (the Schema Builder scans this file).
+# Enable one or more sections: manage_groups, manage_users, manage_packages.
+# =============================================================================
+
+# ============================================================================
+# Groups
+# ============================================================================
+
+manage_groups: false
+
+# Comma separated. Example: devops,appadmins
+group_names: ""
+
+# Supported:
+#   present
+#   absent
+group_state: "present"
+
+# ============================================================================
+# Users
+# ============================================================================
+
+manage_users: false
+
+# Comma separated; every user gets the settings below. Example: alice,bob
+user_names: ""
+
+# Supported:
+#   present
+#   absent
+user_state: "present"
+
+# Supplementary groups, comma separated (added, existing ones kept)
+# Example: devops,wheel
+user_groups: ""
+
+user_shell: "/bin/bash"
+
+# SSH public key(s) added to authorized_keys, one per line
+user_ssh_public_key: ""
+
+# Password, hashed with SHA-512 (openssl on the host). Empty = left unchanged.
+user_password: ""
+
+# Grant sudo through /etc/sudoers.d/90-ansible-<user>. Unticked removes that file.
+user_sudo: false
+
+# Sudo without a password prompt
+user_sudo_nopasswd: false
+
+# With user_state=absent: also delete the home directory and mail spool
+user_remove_home: false
+
+# ============================================================================
+# Packages
+# ============================================================================
+
+manage_packages: false
+
+# Comma or space separated. Example: git,vim,htop
+package_names: ""
+
+# Supported:
+#   present
+#   latest
+#   absent
+package_state: "present"
+
+# Refresh the package cache first (apt; dnf refreshes on its own)
+update_package_cache: true
+
+# Upgrade every installed package
+upgrade_all_packages: false

@@ -1,0 +1,94 @@
+---
+# =============================================================================
+# USERS
+# =============================================================================
+
+# =============================================================================
+# Present
+# =============================================================================
+
+- name: Create or update users
+  when:
+    - user_state == 'present'
+  block:
+
+    # Hashed on the host with openssl, so the controller needs no passlib.
+    # The salt is derived from user + password: the same input gives the same
+    # hash, so re-runs report no change.
+    - name: Hash the password (SHA-512)
+      ansible.builtin.command:
+        cmd: "openssl passwd -6 -salt {{ ((item ~ user_password) | hash('sha256'))[:16] }} -stdin"
+        stdin: "{{ user_password }}"
+      loop: "{{ user_list }}"
+      register: user_password_hashes
+      changed_when: false
+      check_mode: false
+      no_log: true
+      when:
+        - user_password | length > 0
+
+    - name: Ensure users exist
+      ansible.builtin.user:
+        name: "{{ item }}"
+        state: present
+        shell: "{{ user_shell }}"
+        groups: "{{ user_group_list }}"
+        append: true
+        create_home: true
+        password: >-
+          {{ (user_password_hashes.results | selectattr('item', 'equalto', item) | first).stdout
+             if user_password | length > 0 else omit }}
+        update_password: "{{ 'always' if user_password | length > 0 else omit }}"
+      loop: "{{ user_list }}"
+      no_log: "{{ user_password | length > 0 }}"
+
+    - name: Add SSH public keys
+      ansible.posix.authorized_key:
+        user: "{{ item.0 }}"
+        key: "{{ item.1 }}"
+        state: present
+      loop: "{{ user_list | product(user_ssh_key_list) | list }}"
+      loop_control:
+        label: "{{ item.0 }}: {{ item.1 | truncate(40) }}"
+
+    - name: Grant sudo
+      ansible.builtin.copy:
+        dest: "/etc/sudoers.d/90-ansible-{{ item }}"
+        content: "{{ item }} ALL=(ALL) {{ 'NOPASSWD: ' if user_sudo_nopasswd | bool else '' }}ALL\n"
+        owner: root
+        group: root
+        mode: "0440"
+        validate: "visudo -cf %s"
+      loop: "{{ user_list }}"
+      when:
+        - user_sudo | bool
+
+    - name: Revoke sudo granted by this playbook
+      ansible.builtin.file:
+        path: "/etc/sudoers.d/90-ansible-{{ item }}"
+        state: absent
+      loop: "{{ user_list }}"
+      when:
+        - not user_sudo | bool
+
+# =============================================================================
+# Absent
+# =============================================================================
+
+- name: Remove users
+  when:
+    - user_state == 'absent'
+  block:
+
+    - name: Ensure users are absent
+      ansible.builtin.user:
+        name: "{{ item }}"
+        state: absent
+        remove: "{{ user_remove_home | bool }}"
+      loop: "{{ user_list }}"
+
+    - name: Remove sudo rules
+      ansible.builtin.file:
+        path: "/etc/sudoers.d/90-ansible-{{ item }}"
+        state: absent
+      loop: "{{ user_list }}"

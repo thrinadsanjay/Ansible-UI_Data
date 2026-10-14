@@ -8,6 +8,7 @@ docker_users: []
 # Release channel of the Docker CE repository: stable or test.
 docker_repo_channel: "stable"
 # Distro packages that conflict with Docker CE; removed before installing.
+# RedHat family: see docker_conflicting_packages_redhat.
 docker_conflicting_packages:
   - docker.io
   - docker-doc
@@ -15,6 +16,18 @@ docker_conflicting_packages:
   - docker-compose-v2
   - podman-docker
   - containerd
+  - runc
+
+docker_conflicting_packages_redhat:
+  - docker
+  - docker-client
+  - docker-client-latest
+  - docker-common
+  - docker-latest
+  - docker-latest-logrotate
+  - docker-logrotate
+  - docker-engine
+  - podman
   - runc
 
 docker_packages:

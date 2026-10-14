@@ -1,0 +1,119 @@
+---
+# UI Blueprint for deploy_fintracker
+# Auto-generated and managed by UI Blueprint Builder
+# Last updated: 10/12/2026, 10:00:00 PM
+
+playbook_display_name: "Deploy FinTracker"
+description: "Install Docker and deploy or update the Finance Tracker application with Docker Compose"
+metadata:
+  classification: ""
+  application: "FinTracker"
+  tags: "application"
+  version: ""
+  author: "Sanjay Ch"
+  execution_type: ""
+  supported_platforms: ""
+  documentation_url: ""
+  summary: ""
+  group_order:
+    - "Application"
+    - "Admin Account"
+    - "Secrets"
+ai_configuration:
+  ai_summary: ""
+  intent_keywords: ""
+  execution_examples: ""
+  variable_explanations: ""
+  suggested_prompts: ""
+  playbook_purpose: ""
+
+uploads_enabled: false
+
+fields:
+  - name: target_hosts
+    type: text
+    label: "Target Hosts"
+    description: "Hosts or groups to run against. Populated from the host picker in Ansible UI. Manual runs: -e \"target_hosts=hostname_or_group\"."
+    required: true
+    protected: true
+  - name: fintracker_base_url
+    type: text
+    label: "Application URL"
+    group: "Application"
+    required: true
+    help_text: "Eg: \"https://fin.example.com\" or \"http://203.0.113.10:8000\""
+  - name: fintracker_default_admin_email
+    type: text
+    label: "Admin Email"
+    group: "Admin Account"
+    required: true
+    field_width: "small"
+  - name: fintracker_session_secret
+    type: password
+    label: "Session Secret"
+    group: "Secrets"
+    required: true
+    help_text: "32+ characters (openssl rand -hex 32)"
+  - name: fintracker_default_admin_password
+    type: password
+    label: "Admin Password"
+    group: "Admin Account"
+    required: true
+    help_text: "12+ characters"
+    field_width: "small"
+  - name: fintracker_mongo_express_password
+    type: password
+    label: "Mongo Express Password"
+    group: "Secrets"
+    required: true
+    help_text: "12+ characters"
+    field_width: "small"
+  - name: fintracker_app_port
+    type: number
+    label: "Application Port"
+    group: "Application"
+    help_text: "Host port; use the LB backend port"
+    field_width: "small"
+    default: 8000
+  - name: fintracker_image_version
+    type: text
+    label: "Image Version"
+    group: "Application"
+    help_text: "Eg: \"latest\" or \"1.0.6\""
+    field_width: "small"
+    default: "latest"
+  - name: fintracker_pull_policy
+    type: select
+    label: "Image Pull Policy"
+    group: "Application"
+    field_width: "small"
+    default: "missing"
+    options:
+      - "missing"
+      - "always"
+
+advanced_fields:
+  - name: fintracker_default_admin_username
+    type: text
+    label: "Admin Username"
+    group: "Admin Account"
+    advanced: true
+    default: "admin"
+  - name: fintracker_install_dir
+    type: text
+    label: "Install Directory"
+    group: "Application"
+    advanced: true
+    default: "/opt/fintracker"
+  - name: install_docker
+    type: checkbox
+    label: "Install Docker"
+    group: "Application"
+    advanced: true
+    default: true
+  - name: open_firewall_port
+    type: checkbox
+    label: "Open Firewall Port"
+    group: "Application"
+    advanced: true
+    default: true

@@ -16,9 +16,10 @@ metadata:
   documentation_url: ""
   summary: ""
   group_order:
-    - "Disk"
-    - "disk"
-    - "Storage"
+    - "Target"
+    - "LVM"
+    - "Filesystem"
+    - "Safety & Logging"
 ai_configuration:
   ai_summary: ""
   intent_keywords: ""
@@ -48,33 +49,32 @@ fields:
   - name: target_mount
     type: text
     label: "Target Mount"
+    group: "Target"
     required: true
     help_text: "Enter the mount point Eg: \"/var/data\""
     field_width: "small"
   - name: target_disk
     type: text
     label: "Target Disk"
+    group: "Target"
     required: true
     help_text: "Select the Disk"
     field_width: "small"
   - name: target_size_gb
     type: number
     label: "Target Size Gb"
+    group: "Target"
     required: true
   - name: vg_name
     type: text
     label: "Vg Name"
+    group: "LVM"
     field_width: "small"
     default: "vg_data"
-    dependencies:
-      -
-        action: "show"
-        source_field: "operation_mode"
-        operator: "equals"
-        value: "create"
   - name: lv_name
     type: text
     label: "Lv Name"
+    group: "LVM"
     field_width: "small"
     default: "lv_data"
     dependencies:
@@ -88,24 +88,40 @@ advanced_fields:
   - name: filesystem_type
     type: select
     label: "Filesystem Type"
+    group: "Filesystem"
     advanced: true
     default: "xfs"
     options:
       - "xfs"
       - "ext4"
       - "btrfs"
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
   - name: use_remaining_disk_space
     type: checkbox
     label: "Use Remaining Disk Space"
+    group: "Filesystem"
     advanced: true
   - name: mount_options
     type: text
     label: "Mount Options"
+    group: "Filesystem"
     advanced: true
     default: "defaults"
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
   - name: partition_table
     type: select
     label: "Partition Table"
+    group: "Filesystem"
     advanced: true
     default: "gpt"
     options:
@@ -114,57 +130,31 @@ advanced_fields:
   - name: online_resize
     type: checkbox
     label: "Online Resize"
+    group: "Filesystem"
     advanced: true
   - name: fail_if_mount_exists
     type: checkbox
     label: "Fail If Mount Exists"
+    group: "Safety & Logging"
     advanced: true
   - name: fail_if_vg_exists
     type: checkbox
     label: "Fail If Vg Exists"
+    group: "Safety & Logging"
     advanced: true
   - name: enable_fs_validation
     type: checkbox
     label: "Enable Fs Validation"
+    group: "Safety & Logging"
     advanced: true
   - name: enable_logging
     type: checkbox
     label: "Enable Logging"
+    group: "Safety & Logging"
     advanced: true
   - name: log_file
     type: text
     label: "Log File"
+    group: "Safety & Logging"
     advanced: true
     default: "/var/log/ansible-lvm.log"
-  - name: partition_device
-    type: text
-    label: "Partition Device"
-    advanced: true
-  - name: existing_vg_name
-    type: text
-    label: "Existing Vg Name"
-    advanced: true
-  - name: mount_info
-    type: text
-    label: "Mount Info"
-    advanced: true
-  - name: existing_vg
-    type: text
-    label: "Existing Vg"
-    advanced: true
-  - name: partition_name
-    type: text
-    label: "Partition Name"
-    advanced: true
-  - name: free_space_gb
-    type: text
-    label: "Free Space Gb"
-    advanced: true
-  - name: vg_name_cmd
-    type: text
-    label: "Vg Name Cmd"
-    advanced: true
-  - name: ansible_mounts
-    type: text
-    label: "Ansible Mounts"
-    advanced: true

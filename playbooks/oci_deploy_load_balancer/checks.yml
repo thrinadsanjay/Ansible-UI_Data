@@ -1,0 +1,64 @@
+---
+# =============================================================================
+# Common Validations
+# =============================================================================
+
+- name: Validate operation mode and compartment
+  ansible.builtin.assert:
+    that:
+      - operation_mode in ['create', 'destroy']
+      - oci_compartment_id is match('^ocid1\.(compartment|tenancy)\.')
+      - oci_lb_name | length > 0
+    fail_msg: >-
+      operation_mode must be create or destroy, oci_compartment_id a compartment
+      OCID (got '{{ oci_compartment_id }}') and oci_lb_name set.
+    quiet: true
+
+# =============================================================================
+# Create Inputs
+# =============================================================================
+
+- name: Validate Load Balancer inputs
+  ansible.builtin.assert:
+    that:
+      - lb_backend_instance_names | length > 0
+      - oci_lb_backend_port | int > 0
+      - oci_lb_backend_port | int < 65536
+      - oci_lb_health_check_protocol in ['HTTP', 'TCP']
+      - oci_lb_backend_policy in ['ROUND_ROBIN', 'LEAST_CONNECTIONS', 'IP_HASH']
+      - oci_lb_min_bandwidth_mbps | int >= 10
+      - oci_lb_max_bandwidth_mbps | int >= oci_lb_min_bandwidth_mbps | int
+    fail_msg: >-
+      Set oci_lb_backend_instances (comma-separated instance names) and a valid
+      oci_lb_backend_port. Health check protocol: HTTP or TCP. Bandwidth: min 10,
+      max >= min.
+    quiet: true
+  when:
+    - operation_mode == 'create'
+
+- name: Validate HTTPS inputs
+  ansible.builtin.assert:
+    that:
+      - oci_lb_certificate_ocid is match('^ocid1\.certificate\.')
+    fail_msg: >-
+      oci_lb_certificate_ocid must be an OCI Certificates service OCID
+      (ocid1.certificate...). Untick "Enable HTTPS" for an HTTP-only LB.
+    quiet: true
+  when:
+    - operation_mode == 'create'
+    - oci_lb_https_enabled | bool
+
+# =============================================================================
+# Destroy Confirmation
+# =============================================================================
+
+- name: Require explicit destroy confirmation
+  ansible.builtin.assert:
+    that:
+      - confirm_destroy | bool
+    fail_msg: >-
+      This deletes the Load Balancer '{{ oci_lb_name }}' with its listeners and
+      backend sets. Tick "Confirm Destroy" (confirm_destroy=true) to proceed.
+    quiet: true
+  when:
+    - operation_mode == 'destroy'

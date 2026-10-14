@@ -1,0 +1,75 @@
+---
+# =============================================================================
+# Playbook: oci_deploy_load_balancer
+# Description: Create or destroy an OCI Load Balancer in front of instances
+#              (generic, for any application)
+# Author: Sanjay Ch
+# =============================================================================
+#
+# operation_mode:
+#   create  -> Load Balancer, backend set (instances found by name), listeners
+#   destroy -> delete the Load Balancer
+# Needs the VCN and LB subnet created by oci_deploy_instance.
+
+- name: OCI Deploy Load Balancer - Main Playbook
+
+  hosts: "{{ target_hosts | default('localhost') }}"
+  # The oracle.oci modules always run on the controller, using ~/.oci/config.
+  connection: local
+  gather_facts: false
+
+  vars_files:
+    - vars.yml
+
+  # oracle.oci reads credentials from ~/.oci/config; these select the profile and region.
+  environment:
+    OCI_CONFIG_PROFILE: "{{ oci_config_profile }}"
+    OCI_REGION: "{{ oci_region }}"
+
+  pre_tasks:
+
+    - name: Load controller settings
+      ansible.builtin.include_vars:
+        file: controller_vars.yml
+
+    - name: Load derived variables
+      ansible.builtin.include_vars:
+        file: internal_vars.yml
+
+    - name: Abort if target_hosts matches more than one host
+      ansible.builtin.fail:
+        msg: >
+          target_hosts must be a single host (normally localhost); the OCI
+          resources would otherwise be created once per host.
+      when:
+        - ansible_play_hosts_all | length > 1
+
+  tasks:
+
+    # =========================================================================
+    # Common Checks
+    # =========================================================================
+
+    - name: Run common validations
+      ansible.builtin.include_tasks:
+        file: checks.yml
+
+    # =========================================================================
+    # Create Mode
+    # =========================================================================
+
+    - name: Run create workflow
+      ansible.builtin.include_tasks:
+        file: create.yml
+      when:
+        - operation_mode == 'create'
+
+    # =========================================================================
+    # Destroy Mode
+    # =========================================================================
+
+    - name: Run destroy workflow
+      ansible.builtin.include_tasks:
+        file: destroy.yml
+      when:
+        - operation_mode == 'destroy'

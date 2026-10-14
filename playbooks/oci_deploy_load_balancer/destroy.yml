@@ -1,0 +1,11 @@
+---
+# =============================================================================
+# DESTROY MODE
+# Deleting the LB also deletes its listeners, rule sets and backend sets.
+# The instances and the network are not touched.
+# =============================================================================
+
+- name: Delete the Load Balancer
+  ansible.builtin.include_role:
+    name: oci_load_balancer
+    tasks_from: destroy.yml

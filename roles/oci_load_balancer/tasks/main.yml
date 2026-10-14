@@ -3,24 +3,29 @@
   ansible.builtin.assert:
     that:
       - oci_compartment_id is match('^ocid1\.(compartment|tenancy)\.')
-      - oci_lb_certificate_ocid is match('^ocid1\.certificate\.')
+      - not (oci_lb_https_enabled | bool) or oci_lb_certificate_ocid is match('^ocid1\.certificate\.')
+      - oci_lb_health_check_protocol in ['HTTP', 'TCP']
       - oci_lb_subnet_id is match('^ocid1\.subnet\.')
       - oci_lb_min_bandwidth_mbps | int >= 10
       - oci_lb_max_bandwidth_mbps | int >= oci_lb_min_bandwidth_mbps | int
     fail_msg: >-
-      oci_load_balancer: oci_lb_certificate_ocid must be an OCI Certificates
-      service OCID (ocid1.certificate...), got '{{ oci_lb_certificate_ocid }}';
+      oci_load_balancer: with oci_lb_https_enabled, oci_lb_certificate_ocid must be
+      an OCI Certificates service OCID (ocid1.certificate...), got '{{ oci_lb_certificate_ocid }}';
+      oci_lb_health_check_protocol must be HTTP or TCP;
       oci_lb_subnet_id comes from oci_network (run it first); bandwidth must be
       at least 10 Mbps with max >= min.
     quiet: true
 
-- name: Validate the backend address is private
+- name: Validate the backend addresses are private
   ansible.builtin.assert:
     that:
-      - oci_lb_backend_ip_address is match('^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)')
+      - oci_lb_backend_ip_addresses | length > 0
+      - >-
+        oci_lb_backend_ip_addresses
+        | reject('match', '^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)') | list | length == 0
     fail_msg: >-
-      oci_lb_backend_ip_address must be the Compute instance's private IP
-      (oci_compute_private_ip from oci_compute), got '{{ oci_lb_backend_ip_address }}'.
+      oci_lb_backend_ip_addresses must list the private IPs of the backend
+      instances, got {{ oci_lb_backend_ip_addresses }}.
     quiet: true
 
 - name: Create the Load Balancer

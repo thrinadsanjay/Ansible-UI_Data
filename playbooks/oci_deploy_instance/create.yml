@@ -1,0 +1,40 @@
+---
+# =============================================================================
+# CREATE MODE
+# Creates (or reuses) the network and the instance. Re-runs change nothing.
+# Shape, image and size changes are not applied to an existing instance.
+# =============================================================================
+
+- name: Create VCN, gateways, route tables, security lists and subnets
+  ansible.builtin.include_role:
+    name: oci_network
+
+- name: Create the Compute instance
+  ansible.builtin.include_role:
+    name: oci_compute
+
+# =============================================================================
+# SSH Readiness
+# =============================================================================
+
+- name: Wait for SSH on the instance
+  ansible.builtin.wait_for:
+    host: "{{ oci_compute_public_ip | default(oci_compute_private_ip, true) }}"
+    port: 22
+    timeout: 600
+  when:
+    - wait_for_ssh | bool
+
+# =============================================================================
+# Summary
+# =============================================================================
+
+- name: Display instance details
+  ansible.builtin.debug:
+    msg:
+      - "Instance {{ oci_compute_name }} ({{ oci_compute_instance_id }})"
+      - "Private IP: {{ oci_compute_private_ip }}"
+      - "Public IP:  {{ oci_compute_public_ip | default('none', true) }}"
+      - "App ports {{ oci_application_ports | join(', ') }} open to the LB subnet {{ oci_public_subnet_cidr }}
+         {{- ' and ' ~ oci_app_ingress_cidr if oci_app_ingress_cidr | length > 0 else '' }}"
+      - "Add it to the Ansible UI inventory to run deploy_fintracker / manage_instance on it"

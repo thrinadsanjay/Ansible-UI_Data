@@ -1,0 +1,91 @@
+---
+# =============================================================================
+# Common Validations
+# Fail before the first OCI API call, with the UI field names in the message.
+# =============================================================================
+
+- name: Validate operation mode
+  ansible.builtin.assert:
+    that:
+      - operation_mode in ['create', 'destroy']
+    fail_msg: "operation_mode must be create or destroy (got '{{ operation_mode }}')."
+    quiet: true
+
+- name: Validate the compartment and instance name
+  ansible.builtin.assert:
+    that:
+      - oci_compartment_id is match('^ocid1\.(compartment|tenancy)\.')
+      - oci_compute_name is match('^[A-Za-z][A-Za-z0-9-]{0,62}$')
+    fail_msg: >-
+      oci_compartment_id must be a compartment OCID (got '{{ oci_compartment_id }}') and
+      oci_compute_name must start with a letter and use only letters, digits and hyphens
+      (got '{{ oci_compute_name }}').
+    quiet: true
+
+# =============================================================================
+# Create Inputs
+# =============================================================================
+
+- name: Validate instance inputs
+  ansible.builtin.assert:
+    that:
+      - oci_availability_domain | length > 0
+      - oci_compute_image_id is match('^ocid1\.image\.')
+      - oci_compute_ocpus | float > 0
+      - oci_compute_memory_gb | float > 0
+      - oci_compute_boot_volume_gb | int >= 50
+    fail_msg: >-
+      Set oci_availability_domain and oci_compute_image_id (ocid1.image...).
+      OCPUs and memory must be positive; oci_compute_boot_volume_gb at least 50.
+    quiet: true
+  when:
+    - operation_mode == 'create'
+
+- name: Validate network inputs
+  ansible.builtin.assert:
+    that:
+      - oci_vcn_dns_label is match('^[A-Za-z][A-Za-z0-9]{0,14}$')
+      - oci_admin_cidr is match('^(\d{1,3}\.){3}\d{1,3}/\d{1,2}$')
+      - oci_admin_cidr != '0.0.0.0/0' or oci_admin_ssh_allow_any | bool
+      - oci_app_ingress_cidr | length == 0 or oci_app_ingress_cidr is match('^(\d{1,3}\.){3}\d{1,3}/\d{1,2}$')
+      - oci_application_ports | length > 0
+      - oci_application_ports | min > 0
+      - oci_application_ports | max < 65536
+      - not (oci_compute_assign_public_ip | bool) or oci_app_subnet_public | bool
+      - oci_lb_ingress_cidr is match('^(\d{1,3}\.){3}\d{1,3}/\d{1,2}$')
+    fail_msg: >-
+      oci_vcn_dns_label: letters and digits only, max 15, starts with a letter (got '{{ oci_vcn_dns_label }}').
+      oci_admin_cidr: an IPv4 CIDR such as 198.51.100.7/32; 0.0.0.0/0 needs oci_admin_ssh_allow_any.
+      oci_app_ingress_cidr: empty or an IPv4 CIDR.
+      oci_app_ports: comma-separated TCP ports (got '{{ oci_app_ports }}').
+      Assign Public IP needs Public App Subnet. oci_lb_ingress_cidr: an IPv4 CIDR.
+    quiet: true
+  when:
+    - operation_mode == 'create'
+
+- name: Validate the SSH public key
+  ansible.builtin.assert:
+    that:
+      - oci_ssh_public_key is match('^(ssh-(ed25519|rsa)|ecdsa-sha2-nistp\d+) ')
+    fail_msg: >-
+      oci_ssh_public_key_content must be an OpenSSH public key, or leave it
+      empty and point oci_ssh_public_key_file at one on the controller.
+    quiet: true
+  when:
+    - operation_mode == 'create'
+
+# =============================================================================
+# Destroy Confirmation
+# =============================================================================
+
+- name: Require explicit destroy confirmation
+  ansible.builtin.assert:
+    that:
+      - confirm_destroy | bool
+    fail_msg: >-
+      This terminates '{{ oci_compute_name }}' and deletes its boot volume
+      {{- ' and the VCN ' ~ oci_vcn_name if destroy_network | bool else '' }}.
+      Tick "Confirm Destroy" (confirm_destroy=true) to proceed.
+    quiet: true
+  when:
+    - operation_mode == 'destroy'

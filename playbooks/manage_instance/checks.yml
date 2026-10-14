@@ -1,0 +1,50 @@
+---
+# =============================================================================
+# Common Validations
+# =============================================================================
+
+- name: Require at least one section
+  ansible.builtin.assert:
+    that:
+      - manage_groups | bool or manage_users | bool or manage_packages | bool
+    fail_msg: "Tick at least one of Manage Groups, Manage Users or Manage Packages."
+    quiet: true
+
+- name: Validate group inputs
+  ansible.builtin.assert:
+    that:
+      - group_list | length > 0
+      - group_list | reject('match', '^[a-z_][a-z0-9_-]{0,31}$') | list | length == 0
+      - group_state in ['present', 'absent']
+    fail_msg: >-
+      group_names: comma-separated names of lowercase letters, digits, - and _
+      (got '{{ group_names }}'); group_state: present or absent.
+    quiet: true
+  when:
+    - manage_groups | bool
+
+- name: Validate user inputs
+  ansible.builtin.assert:
+    that:
+      - user_list | length > 0
+      - user_list | reject('match', '^[a-z_][a-z0-9_-]{0,31}$') | list | length == 0
+      - "'root' not in user_list"
+      - user_state in ['present', 'absent']
+      - user_ssh_key_list | reject('match', '^(ssh-(ed25519|rsa)|ecdsa-sha2-nistp\d+|sk-\S+) ') | list | length == 0
+    fail_msg: >-
+      user_names: comma-separated names of lowercase letters, digits, - and _, not root
+      (got '{{ user_names }}'); user_state: present or absent; user_ssh_public_key:
+      OpenSSH public keys, one per line.
+    quiet: true
+  when:
+    - manage_users | bool
+
+- name: Validate package inputs
+  ansible.builtin.assert:
+    that:
+      - package_list | length > 0 or upgrade_all_packages | bool or update_package_cache | bool
+      - package_state in ['present', 'latest', 'absent']
+    fail_msg: "Set package_names (or tick Upgrade All Packages); package_state: present, latest or absent."
+    quiet: true
+  when:
+    - manage_packages | bool

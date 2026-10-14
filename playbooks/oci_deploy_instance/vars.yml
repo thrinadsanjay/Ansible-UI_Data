@@ -1,0 +1,200 @@
+---
+# =============================================================================
+# vars.yml
+# Description: Variables for creating/destroying an OCI Compute instance
+# Every key here is a UI input (the Schema Builder scans this file).
+# Derived values live in internal_vars.yml.
+# OCI credentials are NOT set here: the oracle.oci modules read ~/.oci/config.
+# =============================================================================
+
+# ============================================================================
+# Operation Mode
+# ============================================================================
+
+# Supported values:
+#   create
+#   destroy
+#
+# NOTE:
+# - create  → Creates/updates the network and the instance (idempotent)
+# - destroy → Terminates the instance and its boot volume
+operation_mode: "create"
+
+# ============================================================================
+# Required Variables
+# ============================================================================
+
+# Compartment OCID
+# Example: ocid1.compartment.oc1..xxxx
+oci_compartment_id: ""
+
+# Availability domain name
+# Example: "AbCd:AP-HYDERABAD-1-AD-1"
+# Find it with: oci iam availability-domain list --query 'data[].name'
+oci_availability_domain: ""
+
+# Image OCID; must match the shape's CPU architecture
+# (aarch64 image for VM.Standard.A1.Flex)
+# Example: ocid1.image.oc1.ap-hyderabad-1.xxxx
+oci_compute_image_id: ""
+
+# Display name of the instance; also its hostname
+# Letters, digits and hyphens; starts with a letter
+oci_compute_name: "app-server01"
+
+# CIDR allowed to SSH to the instance
+# Example: 198.51.100.7/32
+oci_admin_cidr: ""
+
+# ============================================================================
+# OCI Account
+# ============================================================================
+
+# Profile in ~/.oci/config used for API credentials
+oci_config_profile: "DEFAULT"
+
+# Region; overrides the region in the profile
+oci_region: "ap-hyderabad-1"
+
+# Value of the "project" freeform tag on every resource
+oci_project_tag: "default"
+
+# ============================================================================
+# Instance Configuration
+# ============================================================================
+
+# Supported:
+#   VM.Standard.A1.Flex  (Ampere ARM64)
+#   VM.Standard.E4.Flex  (AMD x86_64)
+#   VM.Standard.E5.Flex  (AMD x86_64)
+oci_compute_shape: "VM.Standard.A1.Flex"
+oci_compute_ocpus: 1
+oci_compute_memory_gb: 6
+
+# Minimum 50
+oci_compute_boot_volume_gb: 50
+
+# Public key installed on the instance. Paste it, or leave empty to read
+# oci_ssh_public_key_file on the controller.
+oci_ssh_public_key_content: ""
+oci_ssh_public_key_file: "~/.ssh/id_ed25519.pub"
+
+# ============================================================================
+# VNIC (primary network interface)
+# ============================================================================
+
+# Display name of the VNIC. Empty = <oci_compute_name>-vnic
+oci_compute_vnic_name: ""
+
+# Hostname (DNS label in the subnet). Empty = oci_compute_name in lowercase
+oci_compute_hostname_label: ""
+
+# Fixed private IP inside oci_app_subnet_cidr. Empty = assigned by OCI
+# Example: 10.20.20.10
+oci_compute_private_ip_address: ""
+
+# Give the VNIC a public IP (needs oci_app_subnet_public: true)
+oci_compute_assign_public_ip: true
+
+# ============================================================================
+# Network Configuration
+# ============================================================================
+
+# Created once and reused by every instance that names the same VCN
+oci_vcn_name: "app-vcn"
+
+# Letters and digits only, max 15 characters, starts with a letter
+oci_vcn_dns_label: "appvcn"
+
+oci_vcn_cidr: "10.20.0.0/16"
+
+# Public subnet for Load Balancers (used by oci_deploy_load_balancer)
+oci_public_subnet_cidr: "10.20.10.0/24"
+
+# Subnet for the instances; must be inside oci_vcn_cidr
+oci_app_subnet_cidr: "10.20.20.0/24"
+
+# true  = instances get a public IP and route through the Internet Gateway
+# false = private subnet routed through the NAT Gateway (use OCI Bastion)
+# OCI cannot change this on an existing subnet.
+oci_app_subnet_public: true
+
+# Application TCP ports, comma separated. Always reachable from the LB subnet.
+# Example: 8000 or 80,443,8080
+oci_app_ports: "8000"
+
+# Also open the application ports to this CIDR (direct access, no LB).
+# Empty = only the Load Balancer subnet can reach them.
+# Example: 198.51.100.0/24 (0.0.0.0/0 = whole Internet)
+oci_app_ingress_cidr: ""
+
+# Allow oci_admin_cidr 0.0.0.0/0 (SSH open to the whole Internet)
+oci_admin_ssh_allow_any: false
+
+# Open SSH to oci_admin_cidr at all (false = no SSH rule; use OCI Bastion)
+oci_admin_ssh_enabled: true
+oci_ssh_port: 22
+
+# ============================================================================
+# Subnets
+# Names left empty are derived from oci_vcn_name.
+# DNS labels: letters and digits, max 15, start with a letter.
+# ============================================================================
+
+# Empty = <oci_vcn_name>-lb-subnet
+oci_public_subnet_name: ""
+# Empty = lb
+oci_public_subnet_dns_label: ""
+
+# Empty = <oci_vcn_name>-app-subnet
+oci_app_subnet_name: ""
+# Empty = app
+oci_app_subnet_dns_label: ""
+
+# ============================================================================
+# Gateways & Route Tables
+# ============================================================================
+
+# Empty = <oci_vcn_name>-igw
+oci_internet_gateway_name: ""
+# Empty = <oci_vcn_name>-natgw
+oci_nat_gateway_name: ""
+# Routes 0.0.0.0/0 to the Internet Gateway. Empty = <oci_vcn_name>-public-rt
+oci_public_route_table_name: ""
+# Routes 0.0.0.0/0 to the NAT Gateway. Empty = <oci_vcn_name>-private-rt
+oci_private_route_table_name: ""
+
+# ============================================================================
+# Security Lists
+# ============================================================================
+
+# Empty = <oci_vcn_name>-lb-sl
+oci_lb_security_list_name: ""
+# Empty = <oci_vcn_name>-app-sl
+oci_app_security_list_name: ""
+
+# Ports opened on the LB subnet for oci_deploy_load_balancer listeners
+oci_lb_http_port: 80
+oci_lb_https_port: 443
+
+# Who may reach the LB listener ports
+oci_lb_ingress_cidr: "0.0.0.0/0"
+
+# ============================================================================
+# Readiness
+# ============================================================================
+
+# Wait until SSH (port 22) answers before finishing
+wait_for_ssh: true
+
+# ============================================================================
+# Safety Controls
+# ============================================================================
+
+# Must be true for operation_mode=destroy.
+# Destroy deletes the instance with its boot volume: ALL data on it is lost.
+confirm_destroy: false
+
+# With destroy: also delete the VCN, subnets, gateways and security lists.
+# Fails while other instances or Load Balancers still use the network.
+destroy_network: false

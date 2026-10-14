@@ -1,7 +1,8 @@
 ---
 # Traffic model:
 #   Internet      -> LB subnet   : TCP oci_lb_http_port / oci_lb_https_port
-#   LB subnet     -> app subnet  : TCP oci_application_port (the app is never exposed to the Internet)
+#   LB subnet     -> app subnet  : TCP oci_application_ports
+#   oci_app_ingress_cidr -> app subnet : TCP oci_application_ports (optional, no Load Balancer)
 #   oci_admin_cidr -> app subnet : TCP 22 (optional, for Ansible / OCI Bastion)
 # The VCN's default security list (which allows SSH from anywhere) is never
 # attached to these subnets.
@@ -12,15 +13,15 @@
     lifecycle_state: AVAILABLE
   register: oci_network_existing_security_lists
 
-- name: "Ensure Load Balancer security list exists: {{ oci_lb_security_list_name }}"
+- name: "Ensure Load Balancer security list exists: {{ oci_network_lb_security_list_name }}"  # noqa: jinja[invalid] (rules are built with a Jinja loop)
   oracle.oci.oci_network_security_list:
     security_list_id: >-
       {{ oci_network_existing_security_lists.security_lists
-         | selectattr('display_name', 'equalto', oci_lb_security_list_name)
+         | selectattr('display_name', 'equalto', oci_network_lb_security_list_name)
          | map(attribute='id') | first | default(omit) }}
     compartment_id: "{{ oci_compartment_id }}"
     vcn_id: "{{ oci_network_vcn.vcn.id }}"
-    display_name: "{{ oci_lb_security_list_name }}"
+    display_name: "{{ oci_network_lb_security_list_name }}"
     ingress_security_rules:
       - description: "HTTPS to the Load Balancer"
         protocol: "6"
@@ -38,30 +39,34 @@
           destination_port_range:
             min: "{{ oci_lb_http_port | int }}"
             max: "{{ oci_lb_http_port | int }}"
-    egress_security_rules:
-      - description: "Load Balancer to application backends"
-        protocol: "6"
-        destination: "{{ oci_app_subnet_cidr }}"
-        destination_type: CIDR_BLOCK
-        tcp_options:
-          destination_port_range:
-            min: "{{ oci_application_port | int }}"
-            max: "{{ oci_application_port | int }}"
+    egress_security_rules: "{{ oci_network_lb_egress_rules }}"
     freeform_tags: "{{ oci_freeform_tags }}"
     state: present
+  vars:
+    # One rule per application port: OCI rules take a single port range.
+    oci_network_lb_egress_rules: >-
+      {% set rules = [] -%}
+      {% for port in oci_application_ports | map('int') | unique -%}
+      {% set _ = rules.append({'description': 'Load Balancer to application backends',
+                               'protocol': '6', 'destination': oci_app_subnet_cidr,
+                               'destination_type': 'CIDR_BLOCK',
+                               'tcp_options': {'destination_port_range': {'min': port, 'max': port}}}) -%}
+      {% endfor -%}
+      {{ rules }}
   register: oci_network_lb_security_list
 
-- name: "Ensure application security list exists: {{ oci_app_security_list_name }}"
+- name: "Ensure application security list exists: {{ oci_network_app_security_list_name }}"  # noqa: jinja[invalid] (rules are built with a Jinja loop)
   oracle.oci.oci_network_security_list:
     security_list_id: >-
       {{ oci_network_existing_security_lists.security_lists
-         | selectattr('display_name', 'equalto', oci_app_security_list_name)
+         | selectattr('display_name', 'equalto', oci_network_app_security_list_name)
          | map(attribute='id') | first | default(omit) }}
     compartment_id: "{{ oci_compartment_id }}"
     vcn_id: "{{ oci_network_vcn.vcn.id }}"
-    display_name: "{{ oci_app_security_list_name }}"
+    display_name: "{{ oci_network_app_security_list_name }}"
     ingress_security_rules: >-
-      {{ oci_network_app_ingress_rules
+      {{ oci_network_port_ingress_rules
+         + oci_network_app_ingress_rules
          + (oci_network_ssh_ingress_rules if oci_admin_ssh_enabled | bool else []) }}
     egress_security_rules:
       - description: "Outbound for OS updates and container image pulls"
@@ -71,15 +76,20 @@
     freeform_tags: "{{ oci_freeform_tags }}"
     state: present
   vars:
+    # Application ports from the LB subnet, plus from oci_app_ingress_cidr when set.
+    oci_network_port_ingress_rules: >-
+      {% set rules = [] -%}
+      {% set sources = [oci_public_subnet_cidr] + ([oci_app_ingress_cidr] if oci_app_ingress_cidr | length > 0 else []) -%}
+      {% for source in sources -%}
+      {% for port in oci_application_ports | map('int') | unique -%}
+      {% set _ = rules.append({'description': 'Application traffic from the Load Balancer subnet'
+                                              if source == oci_public_subnet_cidr else 'Direct application traffic',
+                               'protocol': '6', 'source': source, 'source_type': 'CIDR_BLOCK',
+                               'tcp_options': {'destination_port_range': {'min': port, 'max': port}}}) -%}
+      {% endfor -%}
+      {% endfor -%}
+      {{ rules }}
     oci_network_app_ingress_rules:
-      - description: "Application traffic from the Load Balancer subnet only"
-        protocol: "6"
-        source: "{{ oci_public_subnet_cidr }}"
-        source_type: CIDR_BLOCK
-        tcp_options:
-          destination_port_range:
-            min: "{{ oci_application_port | int }}"
-            max: "{{ oci_application_port | int }}"
       - description: "ICMP path MTU discovery"
         protocol: "1"
         source: "0.0.0.0/0"

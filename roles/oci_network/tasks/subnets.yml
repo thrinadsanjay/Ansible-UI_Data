@@ -8,17 +8,17 @@
     lifecycle_state: AVAILABLE
   register: oci_network_existing_subnets
 
-- name: "Ensure Load Balancer subnet exists: {{ oci_public_subnet_name }}"
+- name: "Ensure Load Balancer subnet exists: {{ oci_network_public_subnet_name }}"
   oracle.oci.oci_network_subnet:
     subnet_id: >-
       {{ oci_network_existing_subnets.subnets
-         | selectattr('display_name', 'equalto', oci_public_subnet_name)
+         | selectattr('display_name', 'equalto', oci_network_public_subnet_name)
          | map(attribute='id') | first | default(omit) }}
     compartment_id: "{{ oci_compartment_id }}"
     vcn_id: "{{ oci_network_vcn.vcn.id }}"
-    display_name: "{{ oci_public_subnet_name }}"
+    display_name: "{{ oci_network_public_subnet_name }}"
     cidr_block: "{{ oci_public_subnet_cidr }}"
-    dns_label: "{{ oci_public_subnet_dns_label }}"
+    dns_label: "{{ oci_network_public_subnet_dns_label }}"
     prohibit_public_ip_on_vnic: false
     route_table_id: "{{ oci_network_public_route_table.route_table.id }}"
     security_list_ids:
@@ -27,17 +27,17 @@
     state: present
   register: oci_network_public_subnet
 
-- name: "Ensure application subnet exists: {{ oci_app_subnet_name }}"
+- name: "Ensure application subnet exists: {{ oci_network_app_subnet_name }}"
   oracle.oci.oci_network_subnet:
     subnet_id: >-
       {{ oci_network_existing_subnets.subnets
-         | selectattr('display_name', 'equalto', oci_app_subnet_name)
+         | selectattr('display_name', 'equalto', oci_network_app_subnet_name)
          | map(attribute='id') | first | default(omit) }}
     compartment_id: "{{ oci_compartment_id }}"
     vcn_id: "{{ oci_network_vcn.vcn.id }}"
-    display_name: "{{ oci_app_subnet_name }}"
+    display_name: "{{ oci_network_app_subnet_name }}"
     cidr_block: "{{ oci_app_subnet_cidr }}"
-    dns_label: "{{ oci_app_subnet_dns_label }}"
+    dns_label: "{{ oci_network_app_subnet_dns_label }}"
     prohibit_public_ip_on_vnic: "{{ not (oci_app_subnet_public | bool) }}"
     route_table_id: >-
       {{ oci_network_public_route_table.route_table.id if oci_app_subnet_public | bool

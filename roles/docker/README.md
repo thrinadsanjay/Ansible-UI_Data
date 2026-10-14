@@ -15,7 +15,7 @@ into a shell.
 | OS family | Status |
 |---|---|
 | Debian / Ubuntu (22.04, 24.04; amd64 and arm64) | Supported |
-| RedHat / Oracle Linux | Not yet. Add a `RedHat` block to `tasks/repository.yml` (a `ansible.builtin.yum_repository` for `https://download.docker.com/linux/rhel`) and add `RedHat` to the check in `tasks/main.yml`. `tasks/install.yml` already uses the generic `ansible.builtin.package` |
+| RedHat / Oracle Linux / RHEL / Rocky / Alma 8 and 9 | Supported (Docker RHEL repository). Not yet tested on a live host. Oracle Linux 7 is not supported: ansible-core 2.17+ needs Python 3.8+ on the target |
 
 ## Dependencies
 

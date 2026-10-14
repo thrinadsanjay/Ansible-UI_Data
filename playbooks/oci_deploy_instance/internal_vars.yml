@@ -1,0 +1,26 @@
+---
+# =============================================================================
+# internal_vars.yml
+# Derived values, loaded with include_vars by main.yml. Not user inputs: the
+# Schema Builder only scans vars.yml and main.yml, so these stay out of the UI.
+# =============================================================================
+
+oci_freeform_tags:
+  project: "{{ oci_project_tag }}"
+  managed_by: "ansible"
+
+# Public key installed on the VM: pasted key, else the file on the controller
+oci_ssh_public_key: >-
+  {{ oci_ssh_public_key_content | trim
+     if oci_ssh_public_key_content | default('') | trim | length > 0
+     else lookup('ansible.builtin.file', oci_ssh_public_key_file) }}
+
+# "8000, 8080" -> [8000, 8080]
+oci_application_ports: >-
+  {{ (oci_app_ports | string).split(',') | map('trim') | reject('equalto', '')
+     | map('int') | list }}
+oci_application_port: "{{ oci_application_ports | first | default(0) }}"
+
+# Do not add the VM to the in-memory inventory; servers are added to the
+# Ansible UI inventory by hand
+oci_compute_add_host: false

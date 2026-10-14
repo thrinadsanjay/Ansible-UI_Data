@@ -28,7 +28,9 @@ set. It does **not** create certificates: it uses the certificate OCID you suppl
 | `oci_compartment_id` | `""` | **Required.** Compartment OCID |
 | `oci_lb_certificate_ocid` | `""` | **Required.** `ocid1.certificate...` for the HTTPS listener |
 | `oci_lb_subnet_id` | `oci_public_subnet_id` | Subnet for the Load Balancer |
-| `oci_lb_backend_ip_address` | `oci_compute_private_ip` | Backend address. Must be a private (RFC 1918) IP |
+| `oci_lb_backend_ip_addresses` | `[oci_compute_private_ip]` | Backend addresses. Must be private (RFC 1918) IPs |
+| `oci_lb_https_enabled` | `true` | `false` = HTTP listener only, no certificate |
+| `oci_lb_health_check_protocol` | `HTTP` | `HTTP` or `TCP` |
 | `oci_lb_name` | `app-lb` | Display name (how the role finds it again) |
 | `oci_lb_min_bandwidth_mbps` / `oci_lb_max_bandwidth_mbps` | `10` / `10` | Flexible shape bandwidth |
 | `oci_lb_backend_set_name` | `app_backend_set` | |

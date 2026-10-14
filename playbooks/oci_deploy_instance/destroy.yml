@@ -1,0 +1,18 @@
+---
+# =============================================================================
+# DESTROY MODE
+# Terminates the instance and its boot volume; optionally deletes the network.
+# Re-running when everything is gone is safe.
+# =============================================================================
+
+- name: Terminate the Compute instance
+  ansible.builtin.include_role:
+    name: oci_compute
+    tasks_from: destroy.yml
+
+- name: Delete the network
+  ansible.builtin.include_role:
+    name: oci_network
+    tasks_from: destroy.yml
+  when:
+    - destroy_network | bool

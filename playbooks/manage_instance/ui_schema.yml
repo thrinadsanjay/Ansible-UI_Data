@@ -1,0 +1,215 @@
+---
+# UI Blueprint for manage_instance
+# Auto-generated and managed by UI Blueprint Builder
+# Last updated: 10/12/2026, 10:00:00 PM
+
+playbook_display_name: "Manage Instance"
+description: "Create or remove groups and users (SSH keys, sudo) and install, update or remove packages"
+metadata:
+  classification: ""
+  application: "Linux"
+  tags: "os"
+  version: ""
+  author: "Sanjay Ch"
+  execution_type: ""
+  supported_platforms: ""
+  documentation_url: ""
+  summary: ""
+  group_order:
+    - "Groups"
+    - "Users"
+    - "Packages"
+ai_configuration:
+  ai_summary: ""
+  intent_keywords: ""
+  execution_examples: ""
+  variable_explanations: ""
+  suggested_prompts: ""
+  playbook_purpose: ""
+
+uploads_enabled: false
+
+fields:
+  - name: target_hosts
+    type: text
+    label: "Target Hosts"
+    description: "Hosts or groups to run against. Populated from the host picker in Ansible UI. Manual runs: -e \"target_hosts=hostname_or_group\"."
+    required: true
+    protected: true
+  - name: manage_groups
+    type: checkbox
+    label: "Manage Groups"
+    group: "Groups"
+    field_width: "small"
+  - name: group_names
+    type: text
+    label: "Group Names"
+    group: "Groups"
+    help_text: "Comma separated. Eg: \"devops,appadmins\""
+    field_width: "small"
+    dependencies:
+      -
+        action: "show"
+        source_field: "manage_groups"
+        operator: "equals"
+        value: true
+  - name: group_state
+    type: select
+    label: "Group State"
+    group: "Groups"
+    field_width: "small"
+    default: "present"
+    options:
+      - "present"
+      - "absent"
+    dependencies:
+      -
+        action: "show"
+        source_field: "manage_groups"
+        operator: "equals"
+        value: true
+  - name: manage_users
+    type: checkbox
+    label: "Manage Users"
+    group: "Users"
+    field_width: "small"
+  - name: user_names
+    type: text
+    label: "User Names"
+    group: "Users"
+    help_text: "Comma separated. Eg: \"alice,bob\""
+    field_width: "small"
+    dependencies:
+      -
+        action: "show"
+        source_field: "manage_users"
+        operator: "equals"
+        value: true
+  - name: user_state
+    type: select
+    label: "User State"
+    group: "Users"
+    field_width: "small"
+    default: "present"
+    options:
+      - "present"
+      - "absent"
+    dependencies:
+      -
+        action: "show"
+        source_field: "manage_users"
+        operator: "equals"
+        value: true
+  - name: user_groups
+    type: text
+    label: "User Groups"
+    group: "Users"
+    help_text: "Supplementary groups, comma separated. Eg: \"devops,wheel\""
+    field_width: "small"
+    dependencies:
+      -
+        action: "show"
+        source_field: "manage_users"
+        operator: "equals"
+        value: true
+  - name: user_ssh_public_key
+    type: public_key
+    label: "SSH Public Key"
+    group: "Users"
+    help_text: "One key per line. Eg: \"ssh-ed25519 AAAA... user@host\""
+    dependencies:
+      -
+        action: "show"
+        source_field: "manage_users"
+        operator: "equals"
+        value: true
+  - name: user_password
+    type: password
+    label: "User Password"
+    group: "Users"
+    help_text: "Optional. Stored as a SHA-512 hash"
+    field_width: "small"
+    dependencies:
+      -
+        action: "show"
+        source_field: "manage_users"
+        operator: "equals"
+        value: true
+  - name: user_sudo
+    type: checkbox
+    label: "Grant Sudo"
+    group: "Users"
+    field_width: "small"
+    dependencies:
+      -
+        action: "show"
+        source_field: "manage_users"
+        operator: "equals"
+        value: true
+  - name: manage_packages
+    type: checkbox
+    label: "Manage Packages"
+    group: "Packages"
+    field_width: "small"
+  - name: package_names
+    type: text
+    label: "Package Names"
+    group: "Packages"
+    help_text: "Comma or space separated. Eg: \"git,vim,htop\""
+    dependencies:
+      -
+        action: "show"
+        source_field: "manage_packages"
+        operator: "equals"
+        value: true
+  - name: package_state
+    type: select
+    label: "Package State"
+    group: "Packages"
+    field_width: "small"
+    default: "present"
+    options:
+      - "present"
+      - "latest"
+      - "absent"
+    dependencies:
+      -
+        action: "show"
+        source_field: "manage_packages"
+        operator: "equals"
+        value: true
+  - name: upgrade_all_packages
+    type: checkbox
+    label: "Upgrade All Packages"
+    group: "Packages"
+    field_width: "small"
+    dependencies:
+      -
+        action: "show"
+        source_field: "manage_packages"
+        operator: "equals"
+        value: true
+
+advanced_fields:
+  - name: user_shell
+    type: text
+    label: "User Shell"
+    group: "Users"
+    advanced: true
+    default: "/bin/bash"
+  - name: user_sudo_nopasswd
+    type: checkbox
+    label: "Sudo Without Password"
+    group: "Users"
+    advanced: true
+  - name: user_remove_home
+    type: checkbox
+    label: "Remove Home On Delete"
+    group: "Users"
+    advanced: true
+  - name: update_package_cache
+    type: checkbox
+    label: "Update Package Cache"
+    group: "Packages"
+    advanced: true
+    default: true

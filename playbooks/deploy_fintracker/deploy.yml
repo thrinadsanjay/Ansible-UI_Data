@@ -1,0 +1,43 @@
+---
+# =============================================================================
+# DEPLOY
+# Checks out the deployment bundle, writes .env and starts the stack.
+# Re-runs only recreate containers whose image or settings changed.
+# =============================================================================
+
+- name: Deploy Finance Tracker
+  ansible.builtin.include_role:
+    name: fintracker_app
+
+# =============================================================================
+# Host Firewall
+# =============================================================================
+
+- name: Check whether firewalld is running
+  ansible.builtin.command:
+    cmd: firewall-cmd --state
+  register: firewalld_state
+  changed_when: false
+  failed_when: false
+  when:
+    - open_firewall_port | bool
+
+- name: Open the application port in firewalld
+  ansible.posix.firewalld:
+    port: "{{ fintracker_app_port }}/tcp"
+    permanent: true
+    immediate: true
+    state: enabled
+  when:
+    - open_firewall_port | bool
+    - firewalld_state.rc | default(1) == 0
+
+# =============================================================================
+# Summary
+# =============================================================================
+
+- name: Display application details
+  ansible.builtin.debug:
+    msg:
+      - "Finance Tracker is healthy on {{ inventory_hostname }}:{{ fintracker_app_port }}"
+      - "URL: {{ fintracker_base_url }}"

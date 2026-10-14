@@ -18,8 +18,15 @@
     create_vnic_details:
       subnet_id: "{{ oci_compute_subnet_id }}"
       assign_public_ip: "{{ oci_compute_assign_public_ip | bool }}"
-      hostname_label: "{{ oci_compute_hostname_label }}"
-      display_name: "{{ oci_compute_name }}-vnic"
+      hostname_label: >-
+        {{ oci_compute_hostname_label if oci_compute_hostname_label | length > 0
+           else oci_compute_name | lower }}
+      display_name: >-
+        {{ oci_compute_vnic_name if oci_compute_vnic_name | length > 0
+           else oci_compute_name ~ '-vnic' }}
+      private_ip: >-
+        {{ oci_compute_private_ip_address if oci_compute_private_ip_address | length > 0
+           else omit }}
     metadata:
       ssh_authorized_keys: "{{ oci_ssh_public_key }}"
     freeform_tags: "{{ oci_freeform_tags }}"

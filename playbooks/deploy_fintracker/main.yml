@@ -1,0 +1,58 @@
+---
+# =============================================================================
+# Playbook: deploy_fintracker
+# Description: Install Docker and deploy/update Finance Tracker with
+#              Docker Compose
+# Author: Sanjay Ch
+# =============================================================================
+
+- name: Deploy FinTracker - Main Playbook
+
+  hosts: "{{ target_hosts }}"
+  become: true
+  gather_facts: true
+
+  vars_files:
+    - vars.yml
+
+  pre_tasks:
+
+    - name: Abort if target_hosts is not defined
+      ansible.builtin.fail:
+        msg: >
+          target_hosts is required.
+      when:
+        - target_hosts is not defined
+          or target_hosts | length == 0
+
+    - name: Load derived variables
+      ansible.builtin.include_vars:
+        file: internal_vars.yml
+
+  tasks:
+
+    # =========================================================================
+    # Common Checks
+    # =========================================================================
+
+    - name: Run common validations
+      ansible.builtin.include_tasks:
+        file: checks.yml
+
+    # =========================================================================
+    # Docker
+    # =========================================================================
+
+    - name: Install Docker Engine and Compose
+      ansible.builtin.include_role:
+        name: docker
+      when:
+        - install_docker | bool
+
+    # =========================================================================
+    # Application
+    # =========================================================================
+
+    - name: Run deploy workflow
+      ansible.builtin.include_tasks:
+        file: deploy.yml

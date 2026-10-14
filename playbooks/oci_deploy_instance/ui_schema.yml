@@ -1,0 +1,568 @@
+---
+# UI Blueprint for oci_deploy_instance
+# Auto-generated and managed by UI Blueprint Builder
+# Last updated: 10/12/2026, 10:00:00 PM
+
+playbook_display_name: "OCI Deploy Instance"
+description: "Create or destroy an OCI Compute instance and its network (generic, any application)"
+metadata:
+  classification: ""
+  application: "OCI"
+  tags: "cloud"
+  version: ""
+  author: "Sanjay Ch"
+  execution_type: ""
+  supported_platforms: ""
+  documentation_url: ""
+  summary: ""
+  group_order:
+    - "Instance"
+    - "Network & Access"
+    - "Destroy"
+    - "OCI Connection"
+    - "Network"
+    - "Security Rules"
+ai_configuration:
+  ai_summary: ""
+  intent_keywords: ""
+  execution_examples: ""
+  variable_explanations: ""
+  suggested_prompts: ""
+  playbook_purpose: ""
+
+uploads_enabled: false
+
+fields:
+  - name: target_hosts
+    type: text
+    label: "Target Hosts"
+    description: "Host that runs the OCI API calls (needs ~/.oci/config and the oci SDK). Use localhost. Manual runs: supply -e \"target_hosts=localhost\"."
+    required: true
+    protected: true
+    default: "localhost"
+  - name: operation_mode
+    type: select
+    label: "Operation Mode"
+    required: true
+    field_width: "small"
+    default: "create"
+    options:
+      - "create"
+      - "destroy"
+  - name: confirm_destroy
+    type: checkbox
+    label: "Confirm Destroy"
+    group: "Destroy"
+    help_text: "Required for destroy. Deletes the instance and its boot volume"
+    field_width: "small"
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "equals"
+        value: "destroy"
+  - name: destroy_network
+    type: checkbox
+    label: "Destroy Network"
+    group: "Destroy"
+    help_text: "With destroy: also delete the VCN. Fails while other instances or LBs use it"
+    field_width: "small"
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "equals"
+        value: "destroy"
+  - name: oci_compartment_id
+    type: text
+    label: "Compartment OCID"
+    group: "Instance"
+    required: true
+    help_text: "Eg: \"ocid1.compartment.oc1..xxxx\""
+    field_width: "large"
+  - name: oci_compute_name
+    type: text
+    label: "Instance Name"
+    group: "Instance"
+    required: true
+    help_text: "Display name and hostname. Letters, digits, hyphens"
+    field_width: "small"
+    default: "app-server01"
+  - name: oci_availability_domain
+    type: text
+    label: "Availability Domain"
+    group: "Instance"
+    help_text: "Required for create. Eg: \"AbCd:AP-HYDERABAD-1-AD-1\""
+    field_width: "small"
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_compute_image_id
+    type: text
+    label: "Image OCID"
+    group: "Instance"
+    help_text: "Required for create. Must match the shape (aarch64 for A1). Eg: \"ocid1.image.oc1.ap-hyderabad-1.xxxx\""
+    field_width: "large"
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_compute_shape
+    type: select
+    label: "Shape"
+    group: "Instance"
+    field_width: "small"
+    default: "VM.Standard.A1.Flex"
+    options:
+      - "VM.Standard.A1.Flex"
+      - "VM.Standard.E4.Flex"
+      - "VM.Standard.E5.Flex"
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_compute_ocpus
+    type: number
+    label: "OCPUs"
+    group: "Instance"
+    field_width: "small"
+    default: 1
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_compute_memory_gb
+    type: number
+    label: "Memory Gb"
+    group: "Instance"
+    field_width: "small"
+    default: 6
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_compute_boot_volume_gb
+    type: number
+    label: "Boot Volume Gb"
+    group: "Instance"
+    help_text: "Minimum 50"
+    field_width: "small"
+    default: 50
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_admin_cidr
+    type: text
+    label: "Admin SSH CIDR"
+    group: "Network & Access"
+    help_text: "Required for create. Eg: \"198.51.100.7/32\""
+    field_width: "small"
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_app_ports
+    type: text
+    label: "Application Ports"
+    group: "Network & Access"
+    help_text: "Comma separated TCP ports, reachable from the LB subnet. Eg: \"8000\" or \"80,443\""
+    field_width: "small"
+    default: "8000"
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_app_ingress_cidr
+    type: text
+    label: "Direct App Access CIDR"
+    group: "Network & Access"
+    help_text: "Also open the app ports to this CIDR (no LB). Empty = LB subnet only"
+    field_width: "small"
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_ssh_public_key_content
+    type: public_key
+    label: "SSH Public Key"
+    group: "Instance"
+    help_text: "Eg: \"ssh-ed25519 AAAA... user@host\". Leave empty to read SSH Public Key File (advanced)"
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+
+advanced_fields:
+  - name: oci_region
+    type: text
+    label: "Region"
+    group: "OCI Connection"
+    advanced: true
+    default: "ap-hyderabad-1"
+  - name: oci_config_profile
+    type: text
+    label: "OCI Config Profile"
+    group: "OCI Connection"
+    advanced: true
+    default: "DEFAULT"
+  - name: oci_project_tag
+    type: text
+    label: "Project Tag"
+    group: "OCI Connection"
+    advanced: true
+    default: "default"
+  - name: oci_ssh_public_key_file
+    type: text
+    label: "SSH Public Key File"
+    group: "Instance"
+    advanced: true
+    default: "~/.ssh/id_ed25519.pub"
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: wait_for_ssh
+    type: checkbox
+    label: "Wait For SSH"
+    group: "Instance"
+    advanced: true
+    default: true
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_vcn_name
+    type: text
+    label: "VCN Name"
+    group: "Network"
+    advanced: true
+    default: "app-vcn"
+  - name: oci_vcn_dns_label
+    type: text
+    label: "VCN DNS Label"
+    group: "Network"
+    advanced: true
+    default: "appvcn"
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_vcn_cidr
+    type: text
+    label: "VCN CIDR"
+    group: "Network"
+    advanced: true
+    default: "10.20.0.0/16"
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_public_subnet_cidr
+    type: text
+    label: "LB Subnet CIDR"
+    group: "Network"
+    advanced: true
+    default: "10.20.10.0/24"
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_app_subnet_cidr
+    type: text
+    label: "App Subnet CIDR"
+    group: "Network"
+    advanced: true
+    default: "10.20.20.0/24"
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_app_subnet_public
+    type: checkbox
+    label: "Public App Subnet"
+    group: "Network"
+    advanced: true
+    default: true
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_admin_ssh_allow_any
+    type: checkbox
+    label: "Allow SSH From Anywhere"
+    group: "Security Rules"
+    advanced: true
+    default: false
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_compute_vnic_name
+    type: text
+    label: "VNIC Name"
+    group: "Instance"
+    help_text: "Empty = <instance name>-vnic"
+    advanced: true
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_compute_hostname_label
+    type: text
+    label: "Hostname"
+    group: "Instance"
+    help_text: "Empty = instance name in lowercase"
+    advanced: true
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_compute_private_ip_address
+    type: text
+    label: "Private IP"
+    group: "Instance"
+    help_text: "Fixed IP in the app subnet. Empty = assigned by OCI"
+    advanced: true
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_compute_assign_public_ip
+    type: checkbox
+    label: "Assign Public IP"
+    group: "Instance"
+    help_text: "Needs Public App Subnet"
+    advanced: true
+    default: true
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_public_subnet_name
+    type: text
+    label: "LB Subnet Name"
+    group: "Network"
+    help_text: "Empty = <VCN name>-lb-subnet"
+    advanced: true
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_public_subnet_dns_label
+    type: text
+    label: "LB Subnet DNS Label"
+    group: "Network"
+    help_text: "Empty = lb"
+    advanced: true
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_app_subnet_name
+    type: text
+    label: "App Subnet Name"
+    group: "Network"
+    help_text: "Empty = <VCN name>-app-subnet"
+    advanced: true
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_app_subnet_dns_label
+    type: text
+    label: "App Subnet DNS Label"
+    group: "Network"
+    help_text: "Empty = app"
+    advanced: true
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_internet_gateway_name
+    type: text
+    label: "Internet Gateway Name"
+    group: "Network"
+    help_text: "Empty = <VCN name>-igw"
+    advanced: true
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_nat_gateway_name
+    type: text
+    label: "NAT Gateway Name"
+    group: "Network"
+    help_text: "Empty = <VCN name>-natgw"
+    advanced: true
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_public_route_table_name
+    type: text
+    label: "Public Route Table Name"
+    group: "Network"
+    help_text: "Empty = <VCN name>-public-rt"
+    advanced: true
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_private_route_table_name
+    type: text
+    label: "Private Route Table Name"
+    group: "Network"
+    help_text: "Empty = <VCN name>-private-rt"
+    advanced: true
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_lb_security_list_name
+    type: text
+    label: "LB Security List Name"
+    group: "Network"
+    help_text: "Empty = <VCN name>-lb-sl"
+    advanced: true
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_app_security_list_name
+    type: text
+    label: "App Security List Name"
+    group: "Network"
+    help_text: "Empty = <VCN name>-app-sl"
+    advanced: true
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_lb_http_port
+    type: number
+    label: "LB HTTP Port"
+    group: "Security Rules"
+    advanced: true
+    default: 80
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_lb_https_port
+    type: number
+    label: "LB HTTPS Port"
+    group: "Security Rules"
+    advanced: true
+    default: 443
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_lb_ingress_cidr
+    type: text
+    label: "LB Ingress CIDR"
+    group: "Security Rules"
+    help_text: "Who may reach the LB listener ports"
+    advanced: true
+    default: "0.0.0.0/0"
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_admin_ssh_enabled
+    type: checkbox
+    label: "Enable SSH Rule"
+    group: "Security Rules"
+    help_text: "Untick to create no SSH rule (OCI Bastion)"
+    advanced: true
+    default: true
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_ssh_port
+    type: number
+    label: "SSH Port"
+    group: "Security Rules"
+    advanced: true
+    default: 22
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]

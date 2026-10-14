@@ -1,0 +1,293 @@
+---
+# UI Blueprint for oci_deploy_load_balancer
+# Auto-generated and managed by UI Blueprint Builder
+# Last updated: 10/12/2026, 10:00:00 PM
+
+playbook_display_name: "OCI Deploy Load Balancer"
+description: "Create or destroy an OCI Load Balancer in front of one or more instances (generic, any application)"
+metadata:
+  classification: ""
+  application: "OCI"
+  tags: "cloud"
+  version: ""
+  author: "Sanjay Ch"
+  execution_type: ""
+  supported_platforms: ""
+  documentation_url: ""
+  summary: ""
+  group_order:
+    - "Load Balancer"
+    - "Backends"
+    - "HTTPS"
+    - "Destroy"
+    - "OCI Connection"
+ai_configuration:
+  ai_summary: ""
+  intent_keywords: ""
+  execution_examples: ""
+  variable_explanations: ""
+  suggested_prompts: ""
+  playbook_purpose: ""
+
+uploads_enabled: false
+
+fields:
+  - name: target_hosts
+    type: text
+    label: "Target Hosts"
+    description: "Host that runs the OCI API calls (needs ~/.oci/config and the oci SDK). Use localhost. Manual runs: supply -e \"target_hosts=localhost\"."
+    required: true
+    protected: true
+    default: "localhost"
+  - name: operation_mode
+    type: select
+    label: "Operation Mode"
+    required: true
+    field_width: "small"
+    default: "create"
+    options:
+      - "create"
+      - "destroy"
+  - name: confirm_destroy
+    type: checkbox
+    label: "Confirm Destroy"
+    group: "Destroy"
+    help_text: "Required for destroy. Deletes the Load Balancer"
+    field_width: "small"
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "equals"
+        value: "destroy"
+  - name: oci_compartment_id
+    type: text
+    label: "Compartment OCID"
+    group: "Load Balancer"
+    required: true
+    help_text: "Eg: \"ocid1.compartment.oc1..xxxx\""
+    field_width: "large"
+  - name: oci_lb_name
+    type: text
+    label: "Load Balancer Name"
+    group: "Load Balancer"
+    required: true
+    field_width: "small"
+    default: "app-lb"
+  - name: oci_vcn_name
+    type: text
+    label: "VCN Name"
+    group: "Load Balancer"
+    required: true
+    help_text: "VCN created by OCI Deploy Instance"
+    field_width: "small"
+    default: "app-vcn"
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_lb_backend_instances
+    type: text
+    label: "Backend Instances"
+    group: "Backends"
+    help_text: "Required for create. Instance names, comma separated. Eg: \"app-server01,app-server02\""
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_lb_backend_port
+    type: number
+    label: "Backend Port"
+    group: "Backends"
+    help_text: "App port on the instances (one of the Application Ports of the instance)"
+    field_width: "small"
+    default: 8000
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_lb_https_enabled
+    type: checkbox
+    label: "Enable HTTPS"
+    group: "HTTPS"
+    help_text: "On = HTTPS on 443 with a certificate. Off = HTTP on 80 only"
+    field_width: "small"
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_lb_certificate_ocid
+    type: text
+    label: "Certificate OCID"
+    group: "HTTPS"
+    help_text: "Required when HTTPS is enabled. Eg: \"ocid1.certificate.oc1.ap-hyderabad-1.xxxx\""
+    field_width: "large"
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+      -
+        action: "show"
+        source_field: "oci_lb_https_enabled"
+        operator: "equals"
+        value: true
+  - name: oci_lb_health_check_protocol
+    type: select
+    label: "Health Check Protocol"
+    group: "Backends"
+    field_width: "small"
+    default: "HTTP"
+    options:
+      - "HTTP"
+      - "TCP"
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_lb_health_check_path
+    type: text
+    label: "Health Check Path"
+    group: "Backends"
+    help_text: "Used with HTTP. Eg: \"/health\""
+    field_width: "small"
+    default: "/"
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+
+advanced_fields:
+  - name: oci_region
+    type: text
+    label: "Region"
+    group: "OCI Connection"
+    advanced: true
+    default: "ap-hyderabad-1"
+  - name: oci_config_profile
+    type: text
+    label: "OCI Config Profile"
+    group: "OCI Connection"
+    advanced: true
+    default: "DEFAULT"
+  - name: oci_project_tag
+    type: text
+    label: "Project Tag"
+    group: "OCI Connection"
+    advanced: true
+    default: "default"
+  - name: oci_lb_subnet_name
+    type: text
+    label: "LB Subnet Name"
+    group: "Load Balancer"
+    help_text: "Empty = <VCN name>-lb-subnet"
+    advanced: true
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_lb_http_redirect_to_https
+    type: checkbox
+    label: "Redirect HTTP To HTTPS"
+    group: "Load Balancer"
+    advanced: true
+    default: true
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_lb_http_port
+    type: number
+    label: "HTTP Port"
+    group: "Load Balancer"
+    help_text: "Must match LB HTTP Port of OCI Deploy Instance"
+    advanced: true
+    default: 80
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_lb_https_port
+    type: number
+    label: "HTTPS Port"
+    group: "Load Balancer"
+    help_text: "Must match LB HTTPS Port of OCI Deploy Instance"
+    advanced: true
+    default: 443
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_lb_min_bandwidth_mbps
+    type: number
+    label: "Min Bandwidth Mbps"
+    group: "Load Balancer"
+    advanced: true
+    default: 10
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_lb_max_bandwidth_mbps
+    type: number
+    label: "Max Bandwidth Mbps"
+    group: "Load Balancer"
+    advanced: true
+    default: 10
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_lb_backend_policy
+    type: select
+    label: "Backend Policy"
+    group: "Backends"
+    advanced: true
+    default: "ROUND_ROBIN"
+    options:
+      - "ROUND_ROBIN"
+      - "LEAST_CONNECTIONS"
+      - "IP_HASH"
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]
+  - name: oci_lb_health_check_return_code
+    type: number
+    label: "Health Check Return Code"
+    group: "Backends"
+    advanced: true
+    default: 200
+    dependencies:
+      -
+        action: "show"
+        source_field: "operation_mode"
+        operator: "in"
+        value: ["create"]

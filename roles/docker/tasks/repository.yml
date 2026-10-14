@@ -1,5 +1,6 @@
 ---
 # Official Docker CE repository, per https://docs.docker.com/engine/install/ubuntu/
+# and https://docs.docker.com/engine/install/rhel/
 - name: Configure the Docker apt repository
   when: ansible_facts.os_family == 'Debian'
   block:
@@ -34,3 +35,21 @@
       ansible.builtin.apt:
         update_cache: true
       when: docker_apt_repository is changed
+
+# Oracle Linux, RHEL, Rocky and Alma use Docker's RHEL repository.
+- name: Configure the Docker yum repository
+  when: ansible_facts.os_family == 'RedHat'
+  block:
+    - name: Remove distribution packages that conflict with Docker CE
+      ansible.builtin.package:
+        name: "{{ docker_conflicting_packages_redhat }}"
+        state: absent
+
+    - name: Add the Docker yum repository
+      ansible.builtin.yum_repository:
+        name: docker-ce-{{ docker_repo_channel }}
+        description: Docker CE {{ docker_repo_channel }}
+        baseurl: "https://download.docker.com/linux/rhel/{{ ansible_facts.distribution_major_version }}/$basearch/{{ docker_repo_channel }}"
+        gpgcheck: true
+        gpgkey: "https://download.docker.com/linux/rhel/gpg"
+        enabled: true

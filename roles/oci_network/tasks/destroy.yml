@@ -29,7 +29,7 @@
         state: absent
       loop: >-
         {{ oci_network_destroy_subnets.subnets
-           | selectattr('display_name', 'in', [oci_public_subnet_name, oci_app_subnet_name]) }}
+           | selectattr('display_name', 'in', [oci_network_public_subnet_name, oci_network_app_subnet_name]) }}
       loop_control:
         label: "{{ item.display_name }}"
 
@@ -46,7 +46,7 @@
         state: absent
       loop: >-
         {{ oci_network_destroy_route_tables.route_tables
-           | selectattr('display_name', 'in', [oci_public_route_table_name, oci_private_route_table_name]) }}
+           | selectattr('display_name', 'in', [oci_network_public_route_table_name, oci_network_private_route_table_name]) }}
       loop_control:
         label: "{{ item.display_name }}"
 
@@ -63,7 +63,7 @@
         state: absent
       loop: >-
         {{ oci_network_destroy_security_lists.security_lists
-           | selectattr('display_name', 'in', [oci_lb_security_list_name, oci_app_security_list_name]) }}
+           | selectattr('display_name', 'in', [oci_network_lb_security_list_name, oci_network_app_security_list_name]) }}
       loop_control:
         label: "{{ item.display_name }}"
 
@@ -71,7 +71,7 @@
       oracle.oci.oci_network_nat_gateway_facts:
         compartment_id: "{{ oci_compartment_id }}"
         vcn_id: "{{ oci_network_destroy_vcn_id }}"
-        display_name: "{{ oci_nat_gateway_name }}"
+        display_name: "{{ oci_network_nat_gateway_name }}"
         lifecycle_state: AVAILABLE
       register: oci_network_destroy_nat_gateways
 
@@ -79,7 +79,7 @@
       oracle.oci.oci_network_nat_gateway:
         nat_gateway_id: "{{ item.id }}"
         state: absent
-      loop: "{{ oci_network_destroy_nat_gateways.nat_gateways | selectattr('display_name', 'equalto', oci_nat_gateway_name) }}"
+      loop: "{{ oci_network_destroy_nat_gateways.nat_gateways | selectattr('display_name', 'equalto', oci_network_nat_gateway_name) }}"
       loop_control:
         label: "{{ item.display_name }}"
 
@@ -87,7 +87,7 @@
       oracle.oci.oci_network_internet_gateway_facts:
         compartment_id: "{{ oci_compartment_id }}"
         vcn_id: "{{ oci_network_destroy_vcn_id }}"
-        display_name: "{{ oci_internet_gateway_name }}"
+        display_name: "{{ oci_network_internet_gateway_name }}"
         lifecycle_state: AVAILABLE
       register: oci_network_destroy_internet_gateways
 
@@ -95,7 +95,7 @@
       oracle.oci.oci_network_internet_gateway:
         ig_id: "{{ item.id }}"
         state: absent
-      loop: "{{ oci_network_destroy_internet_gateways.internet_gateways | selectattr('display_name', 'equalto', oci_internet_gateway_name) }}"
+      loop: "{{ oci_network_destroy_internet_gateways.internet_gateways | selectattr('display_name', 'equalto', oci_network_internet_gateway_name) }}"
       loop_control:
         label: "{{ item.display_name }}"
 

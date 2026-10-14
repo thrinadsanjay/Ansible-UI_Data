@@ -1,0 +1,8 @@
+---
+# =============================================================================
+# internal_vars.yml
+# Derived values, loaded with include_vars by main.yml. Not user inputs.
+# =============================================================================
+
+# Let the SSH login user run docker without sudo
+docker_users: "{{ [ansible_user] if ansible_user is defined else [] }}"

@@ -1,0 +1,69 @@
+---
+# =============================================================================
+# Playbook: manage_instance
+# Description: Manage groups, users and packages on Linux hosts
+# Author: Sanjay Ch
+# =============================================================================
+
+- name: Manage Instance - Main Playbook
+
+  hosts: "{{ target_hosts }}"
+  become: true
+  gather_facts: true
+
+  vars_files:
+    - vars.yml
+
+  pre_tasks:
+
+    - name: Abort if target_hosts is not defined
+      ansible.builtin.fail:
+        msg: >
+          target_hosts is required.
+      when:
+        - target_hosts is not defined
+          or target_hosts | length == 0
+
+    - name: Load derived variables
+      ansible.builtin.include_vars:
+        file: internal_vars.yml
+
+  tasks:
+
+    # =========================================================================
+    # Common Checks
+    # =========================================================================
+
+    - name: Run common validations
+      ansible.builtin.include_tasks:
+        file: checks.yml
+
+    # =========================================================================
+    # Groups (before users, so users can join new groups)
+    # =========================================================================
+
+    - name: Run groups workflow
+      ansible.builtin.include_tasks:
+        file: groups.yml
+      when:
+        - manage_groups | bool
+
+    # =========================================================================
+    # Users
+    # =========================================================================
+
+    - name: Run users workflow
+      ansible.builtin.include_tasks:
+        file: users.yml
+      when:
+        - manage_users | bool
+
+    # =========================================================================
+    # Packages
+    # =========================================================================
+
+    - name: Run packages workflow
+      ansible.builtin.include_tasks:
+        file: packages.yml
+      when:
+        - manage_packages | bool

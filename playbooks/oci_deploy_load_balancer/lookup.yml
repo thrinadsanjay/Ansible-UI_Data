@@ -1,0 +1,92 @@
+---
+# =============================================================================
+# LOOKUP
+# Finds the LB subnet by name and the backend instances' private IPs.
+# =============================================================================
+
+# =============================================================================
+# LB Subnet
+# =============================================================================
+
+- name: Look up VCN {{ oci_vcn_name }}
+  oracle.oci.oci_network_vcn_facts:
+    compartment_id: "{{ oci_compartment_id }}"
+    display_name: "{{ oci_vcn_name }}"
+    lifecycle_state: AVAILABLE
+  register: lb_vcn_facts
+
+- name: Fail if the VCN does not exist
+  ansible.builtin.assert:
+    that:
+      - lb_vcn_facts.vcns | selectattr('display_name', 'equalto', oci_vcn_name) | list | length == 1
+    fail_msg: "VCN '{{ oci_vcn_name }}' not found. Create it with oci_deploy_instance first."
+    quiet: true
+
+- name: Look up subnet {{ lb_subnet_display_name }}
+  oracle.oci.oci_network_subnet_facts:
+    compartment_id: "{{ oci_compartment_id }}"
+    vcn_id: "{{ (lb_vcn_facts.vcns | selectattr('display_name', 'equalto', oci_vcn_name) | first).id }}"
+    display_name: "{{ lb_subnet_display_name }}"
+    lifecycle_state: AVAILABLE
+  register: lb_subnet_facts
+
+- name: Fail if the LB subnet does not exist
+  ansible.builtin.assert:
+    that:
+      - lb_subnet_facts.subnets | selectattr('display_name', 'equalto', lb_subnet_display_name) | list | length == 1
+    fail_msg: "Subnet '{{ lb_subnet_display_name }}' not found in VCN '{{ oci_vcn_name }}'."
+    quiet: true
+
+- name: Set the LB subnet
+  ansible.builtin.set_fact:
+    oci_lb_subnet_id: "{{ (lb_subnet_facts.subnets | selectattr('display_name', 'equalto', lb_subnet_display_name) | first).id }}"
+
+# =============================================================================
+# Backend Instances
+# =============================================================================
+
+- name: Look up backend instances
+  oracle.oci.oci_compute_instance_facts:
+    compartment_id: "{{ oci_compartment_id }}"
+    display_name: "{{ item }}"
+    lifecycle_state: RUNNING
+  loop: "{{ lb_backend_instance_names }}"
+  register: lb_instance_facts
+
+- name: Fail unless each backend name matches exactly one running instance
+  ansible.builtin.assert:
+    that:
+      - lb_instance_problems | length == 0
+    fail_msg: "Expected exactly one RUNNING instance for each of: {{ lb_instance_problems | join(', ') }}"
+    quiet: true
+  vars:
+    lb_instance_problems: >-
+      {% set bad = [] -%}
+      {% for r in lb_instance_facts.results -%}
+      {% if r.instances | selectattr('display_name', 'equalto', r.item) | list | length != 1 -%}
+      {% set _ = bad.append(r.item) -%}
+      {% endif -%}
+      {% endfor -%}
+      {{ bad }}
+
+- name: Look up the backend VNIC attachments
+  oracle.oci.oci_compute_vnic_attachment_facts:
+    compartment_id: "{{ oci_compartment_id }}"
+    instance_id: "{{ (item.instances | selectattr('display_name', 'equalto', item.item) | first).id }}"
+  loop: "{{ lb_instance_facts.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+  register: lb_vnic_attachments
+
+- name: Read the backend VNICs
+  oracle.oci.oci_network_vnic_facts:
+    vnic_id: >-
+      {{ (item.vnic_attachments | selectattr('lifecycle_state', 'equalto', 'ATTACHED') | first).vnic_id }}
+  loop: "{{ lb_vnic_attachments.results }}"
+  loop_control:
+    label: "{{ item.item.item }}"
+  register: lb_vnics
+
+- name: Set the backend private IPs
+  ansible.builtin.set_fact:
+    oci_lb_backend_ip_addresses: "{{ lb_vnics.results | map(attribute='vnic') | map(attribute='private_ip') | list }}"

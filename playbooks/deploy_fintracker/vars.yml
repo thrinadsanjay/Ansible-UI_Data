@@ -1,0 +1,58 @@
+---
+# =============================================================================
+# vars.yml
+# Description: Variables for deploying Finance Tracker
+# Every key here is a UI input (the Schema Builder scans this file).
+# =============================================================================
+
+# ============================================================================
+# Required Variables
+# ============================================================================
+
+# URL users open; must match the LB certificate when behind HTTPS
+# Examples:
+#   https://fin.example.com
+#   http://203.0.113.10:8000   (no Load Balancer)
+fintracker_base_url: ""
+
+fintracker_default_admin_email: ""
+
+# ============================================================================
+# Secrets
+# ============================================================================
+
+# Session secret: 32+ characters (openssl rand -hex 32)
+fintracker_session_secret: ""
+
+# 12+ characters each
+fintracker_default_admin_password: ""
+fintracker_mongo_express_password: ""
+
+# ============================================================================
+# Application Configuration
+# ============================================================================
+
+fintracker_default_admin_username: "admin"
+
+# Host port the app is published on (LB backend port / direct access port)
+fintracker_app_port: 8000
+
+# automationbuilder/fintracker image tag, e.g. 1.0.6 to pin or roll back
+fintracker_image_version: "latest"
+
+# Supported:
+#   missing  (pull only absent images)
+#   always   (fetch a new image for the same tag)
+fintracker_pull_policy: "missing"
+
+fintracker_install_dir: "/opt/fintracker"
+
+# ============================================================================
+# Host Preparation
+# ============================================================================
+
+# Install Docker Engine + Compose (Ubuntu/Debian, Oracle Linux/RHEL 8+)
+install_docker: true
+
+# Open fintracker_app_port in firewalld when it is running (Oracle Linux)
+open_firewall_port: true

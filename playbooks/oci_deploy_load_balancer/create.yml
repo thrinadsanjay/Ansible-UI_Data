@@ -1,0 +1,23 @@
+---
+# =============================================================================
+# CREATE MODE
+# Creates (or updates) the Load Balancer. Re-runs change nothing; a replaced
+# instance's old IP is removed from the backend set.
+# =============================================================================
+
+- name: Find the LB subnet and backend IPs
+  ansible.builtin.include_tasks:
+    file: lookup.yml
+
+- name: Create the Load Balancer, backend set and listeners
+  ansible.builtin.include_role:
+    name: oci_load_balancer
+
+- name: Display Load Balancer details
+  ansible.builtin.debug:
+    msg:
+      - "Load Balancer {{ oci_lb_name }}: public IP {{ oci_load_balancer_public_ip }}"
+      - "Backends: {{ lb_backend_instance_names | zip(oci_lb_backend_ip_addresses) | map('join', ' = ') | join(', ') }} (port {{ oci_lb_backend_port }})"
+      - >-
+        {{ 'https://<your domain> (point its DNS at ' ~ oci_load_balancer_public_ip ~ ')'
+           if oci_lb_https_enabled | bool else 'http://' ~ oci_load_balancer_public_ip ~ '/' }}

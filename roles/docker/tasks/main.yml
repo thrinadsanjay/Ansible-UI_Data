@@ -3,10 +3,11 @@
 - name: Check that the operating system is supported
   ansible.builtin.assert:
     that:
-      - ansible_facts.os_family in ['Debian']
+      - ansible_facts.os_family in ['Debian', 'RedHat']
     fail_msg: >-
-      The docker role supports Debian-family systems (Ubuntu) today; this host
-      is {{ ansible_facts.distribution }} ({{ ansible_facts.os_family }}).
+      The docker role supports Debian-family (Ubuntu, Debian) and RedHat-family
+      (Oracle Linux, RHEL, Rocky, Alma 8+) systems; this host is
+      {{ ansible_facts.distribution }} ({{ ansible_facts.os_family }}).
     quiet: true
 
 - name: Configure the Docker package repository

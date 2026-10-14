@@ -1,0 +1,16 @@
+---
+# Effective resource names: the oci_* inputs from defaults/main.yml, or a name
+# derived from oci_vcn_name when an input is left empty. Tasks use only these.
+oci_network_public_subnet_name: "{{ oci_public_subnet_name if oci_public_subnet_name | default('') | length > 0 else oci_vcn_name ~ '-lb-subnet' }}"
+oci_network_app_subnet_name: "{{ oci_app_subnet_name if oci_app_subnet_name | default('') | length > 0 else oci_vcn_name ~ '-app-subnet' }}"
+oci_network_public_subnet_dns_label: "{{ oci_public_subnet_dns_label if oci_public_subnet_dns_label | default('') | length > 0 else 'lb' }}"
+oci_network_app_subnet_dns_label: "{{ oci_app_subnet_dns_label if oci_app_subnet_dns_label | default('') | length > 0 else 'app' }}"
+oci_network_internet_gateway_name: "{{ oci_internet_gateway_name if oci_internet_gateway_name | default('') | length > 0 else oci_vcn_name ~ '-igw' }}"
+oci_network_nat_gateway_name: "{{ oci_nat_gateway_name if oci_nat_gateway_name | default('') | length > 0 else oci_vcn_name ~ '-natgw' }}"
+oci_network_public_route_table_name: >-
+  {{ oci_public_route_table_name if oci_public_route_table_name | default('') | length > 0 else oci_vcn_name ~ '-public-rt' }}
+oci_network_private_route_table_name: >-
+  {{ oci_private_route_table_name if oci_private_route_table_name | default('') | length > 0 else oci_vcn_name ~ '-private-rt' }}
+oci_network_lb_security_list_name: "{{ oci_lb_security_list_name if oci_lb_security_list_name | default('') | length > 0 else oci_vcn_name ~ '-lb-sl' }}"
+oci_network_app_security_list_name: >-
+  {{ oci_app_security_list_name if oci_app_security_list_name | default('') | length > 0 else oci_vcn_name ~ '-app-sl' }}

@@ -1,0 +1,52 @@
+---
+# =============================================================================
+# PACKAGES
+# Debian family uses apt; RedHat family uses dnf (via ansible.builtin.package).
+# =============================================================================
+
+- name: Refresh the apt cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+  when:
+    - update_package_cache | bool
+    - ansible_facts.os_family == 'Debian'
+
+- name: Ensure packages are {{ package_state }}
+  ansible.builtin.package:
+    name: "{{ package_list }}"
+    state: "{{ package_state }}"
+  when:
+    - package_list | length > 0
+
+# =============================================================================
+# Full Upgrade
+# =============================================================================
+
+- name: Upgrade all packages (apt)
+  ansible.builtin.apt:
+    upgrade: safe
+  when:
+    - upgrade_all_packages | bool
+    - ansible_facts.os_family == 'Debian'
+
+- name: Upgrade all packages (dnf)
+  ansible.builtin.dnf:
+    name: "*"
+    state: latest  # noqa: package-latest
+  when:
+    - upgrade_all_packages | bool
+    - ansible_facts.os_family == 'RedHat'
+
+- name: Check whether a reboot is required
+  ansible.builtin.stat:
+    path: /var/run/reboot-required
+  register: reboot_required
+  when:
+    - ansible_facts.os_family == 'Debian'
+
+- name: Report pending reboot
+  ansible.builtin.debug:
+    msg: "{{ inventory_hostname }} needs a reboot to finish the upgrade."
+  when:
+    - reboot_required.stat.exists | default(false)

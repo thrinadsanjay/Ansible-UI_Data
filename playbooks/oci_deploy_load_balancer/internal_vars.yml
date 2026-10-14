@@ -1,0 +1,19 @@
+---
+# =============================================================================
+# internal_vars.yml
+# Derived values, loaded with include_vars by main.yml. Not user inputs: the
+# Schema Builder only scans vars.yml and main.yml, so these stay out of the UI.
+# =============================================================================
+
+oci_freeform_tags:
+  project: "{{ oci_project_tag }}"
+  managed_by: "ansible"
+
+# "app-server01, app-server02" -> ["app-server01", "app-server02"]
+lb_backend_instance_names: >-
+  {{ (oci_lb_backend_instances | string).split(',') | map('trim') | reject('equalto', '')
+     | unique | list }}
+
+lb_subnet_display_name: >-
+  {{ oci_lb_subnet_name if oci_lb_subnet_name | default('') | length > 0
+     else oci_vcn_name ~ '-lb-subnet' }}

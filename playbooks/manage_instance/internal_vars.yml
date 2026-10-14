@@ -1,0 +1,12 @@
+---
+# =============================================================================
+# internal_vars.yml
+# Derived values, loaded with include_vars by main.yml. Not user inputs.
+# =============================================================================
+
+group_list: "{{ (group_names | string).split(',') | map('trim') | reject('equalto', '') | unique | list }}"
+user_list: "{{ (user_names | string).split(',') | map('trim') | reject('equalto', '') | unique | list }}"
+user_group_list: "{{ (user_groups | string).split(',') | map('trim') | reject('equalto', '') | unique | list }}"
+package_list: "{{ (package_names | string) | regex_replace(',', ' ') | split | unique | list }}"
+user_ssh_key_list: >-
+  {{ (user_ssh_public_key | string).splitlines() | map('trim') | reject('equalto', '') | list }}

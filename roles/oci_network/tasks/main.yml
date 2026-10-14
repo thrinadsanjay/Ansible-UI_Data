@@ -7,24 +7,41 @@
       - oci_public_subnet_cidr is match('^(\d{1,3}\.){3}\d{1,3}/\d{1,2}$')
       - oci_app_subnet_cidr is match('^(\d{1,3}\.){3}\d{1,3}/\d{1,2}$')
       - oci_public_subnet_cidr != oci_app_subnet_cidr
-      - oci_application_port | int > 0
+      - oci_vcn_dns_label is match('^[A-Za-z][A-Za-z0-9]{0,14}$')
+      - oci_network_public_subnet_dns_label is match('^[A-Za-z][A-Za-z0-9]{0,14}$')
+      - oci_network_app_subnet_dns_label is match('^[A-Za-z][A-Za-z0-9]{0,14}$')
+      - oci_network_public_subnet_dns_label != oci_network_app_subnet_dns_label
+      - oci_ssh_port | int > 0
+      - oci_application_ports | length > 0
+      - oci_application_ports | map('int') | min > 0
+      - oci_application_ports | map('int') | max < 65536
     fail_msg: >-
       oci_network: oci_compartment_id must be a compartment or tenancy OCID (got
       '{{ oci_compartment_id }}'), and oci_vcn_cidr / oci_public_subnet_cidr /
-      oci_app_subnet_cidr must be distinct IPv4 CIDRs.
+      oci_app_subnet_cidr must be distinct IPv4 CIDRs; DNS labels letters and digits
+      (max 15, start with a letter, subnet labels distinct); oci_application_ports
+      a list of TCP ports (got {{ oci_application_ports }}).
     quiet: true
 
 - name: Validate the administrator SSH CIDR
   ansible.builtin.assert:
     that:
       - oci_admin_cidr is match('^(\d{1,3}\.){3}\d{1,3}/\d{1,2}$')
-      - oci_admin_cidr != '0.0.0.0/0'
+      - oci_admin_cidr != '0.0.0.0/0' or oci_admin_ssh_allow_any | bool
     fail_msg: >-
       oci_admin_cidr must be a specific IPv4 CIDR such as 198.51.100.7/32
-      (got '{{ oci_admin_cidr }}'). SSH is never opened to 0.0.0.0/0.
+      (got '{{ oci_admin_cidr }}'). 0.0.0.0/0 needs oci_admin_ssh_allow_any=true.
       Set oci_admin_ssh_enabled=false to create no SSH rule.
     quiet: true
   when: oci_admin_ssh_enabled | bool
+
+- name: Validate the direct application CIDR
+  ansible.builtin.assert:
+    that:
+      - oci_app_ingress_cidr is match('^(\d{1,3}\.){3}\d{1,3}/\d{1,2}$')
+    fail_msg: "oci_app_ingress_cidr must be an IPv4 CIDR such as 198.51.100.7/32 (got '{{ oci_app_ingress_cidr }}')."
+    quiet: true
+  when: oci_app_ingress_cidr | length > 0
 
 - name: Create the VCN
   ansible.builtin.import_tasks: vcn.yml

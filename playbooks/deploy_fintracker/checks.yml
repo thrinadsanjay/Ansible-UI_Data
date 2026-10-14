@@ -1,0 +1,30 @@
+---
+# =============================================================================
+# Common Validations
+# =============================================================================
+
+- name: Validate application settings
+  ansible.builtin.assert:
+    that:
+      - fintracker_base_url is match('^https?://')
+      - fintracker_default_admin_email is match('^[^@\s]+@[^@\s]+$')
+      - fintracker_session_secret | length >= 32
+      - fintracker_default_admin_password | length >= 12
+      - fintracker_mongo_express_password | length >= 12
+      - fintracker_app_port | int > 0
+    fail_msg: >-
+      Set fintracker_base_url (http:// or https://), fintracker_default_admin_email,
+      a fintracker_session_secret of 32+ characters and admin / mongo-express
+      passwords of 12+ characters.
+    quiet: true
+
+- name: Validate the operating system
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.os_family in ['Debian', 'RedHat']
+      - ansible_facts.python_version is version('3.8', '>=')
+    fail_msg: >-
+      {{ inventory_hostname }} runs {{ ansible_facts.distribution }}
+      {{ ansible_facts.distribution_version }} with Python {{ ansible_facts.python_version }}.
+      Supported: Ubuntu/Debian or Oracle Linux/RHEL 8+ with Python 3.8+.
+    quiet: true

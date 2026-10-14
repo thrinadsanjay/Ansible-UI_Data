@@ -1,0 +1,107 @@
+---
+# =============================================================================
+# vars.yml
+# Description: Variables for creating/destroying an OCI Load Balancer
+# Every key here is a UI input (the Schema Builder scans this file).
+# Derived values live in internal_vars.yml.
+# =============================================================================
+
+# ============================================================================
+# Operation Mode
+# ============================================================================
+
+# Supported values:
+#   create
+#   destroy
+operation_mode: "create"
+
+# ============================================================================
+# Required Variables
+# ============================================================================
+
+# Compartment OCID
+# Example: ocid1.compartment.oc1..xxxx
+oci_compartment_id: ""
+
+# Load Balancer display name
+oci_lb_name: "app-lb"
+
+# Backend instances (display names), comma separated. Must be RUNNING.
+# Example: app-server01,app-server02
+oci_lb_backend_instances: ""
+
+# Port the application listens on in the instances; must be one of the
+# Application Ports opened by oci_deploy_instance
+oci_lb_backend_port: 8000
+
+# ============================================================================
+# OCI Account
+# ============================================================================
+
+oci_config_profile: "DEFAULT"
+oci_region: "ap-hyderabad-1"
+
+# Value of the "project" freeform tag
+oci_project_tag: "default"
+
+# ============================================================================
+# Network
+# ============================================================================
+
+# VCN created by oci_deploy_instance
+oci_vcn_name: "app-vcn"
+
+# Public subnet for the LB. Empty = "<oci_vcn_name>-lb-subnet" (the default
+# LB Subnet Name of oci_deploy_instance). Set it when you named the subnet there.
+oci_lb_subnet_name: ""
+
+# ============================================================================
+# Listeners
+# ============================================================================
+
+# true  = HTTPS listener on 443 with the certificate below (HTTP 80 redirects)
+# false = HTTP listener on 80 only, no certificate
+oci_lb_https_enabled: false
+
+# OCI Certificates service certificate (required when HTTPS is enabled)
+# Example: ocid1.certificate.oc1.ap-hyderabad-1.xxxx
+oci_lb_certificate_ocid: ""
+
+# With HTTPS: answer HTTP with a 301 redirect to HTTPS
+oci_lb_http_redirect_to_https: true
+
+# Listener ports; must match the LB HTTP/HTTPS Ports opened by oci_deploy_instance
+oci_lb_http_port: 80
+oci_lb_https_port: 443
+
+# ============================================================================
+# Load Balancer Configuration
+# ============================================================================
+
+# Flexible shape bandwidth, minimum 10
+oci_lb_min_bandwidth_mbps: 10
+oci_lb_max_bandwidth_mbps: 10
+
+# Supported:
+#   ROUND_ROBIN
+#   LEAST_CONNECTIONS
+#   IP_HASH
+oci_lb_backend_policy: "ROUND_ROBIN"
+
+# ============================================================================
+# Health Check
+# ============================================================================
+
+# Supported:
+#   HTTP  (GET oci_lb_health_check_path, expect oci_lb_health_check_return_code)
+#   TCP   (port open)
+oci_lb_health_check_protocol: "HTTP"
+oci_lb_health_check_path: "/"
+oci_lb_health_check_return_code: 200
+
+# ============================================================================
+# Safety Controls
+# ============================================================================
+
+# Must be true for operation_mode=destroy
+confirm_destroy: false

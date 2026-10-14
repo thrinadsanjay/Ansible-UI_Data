@@ -9,7 +9,12 @@ oci_compute_subnet_id: "{{ oci_app_subnet_id | default('') }}"
 
 # --- Instance ----------------------------------------------------------------
 oci_compute_name: "app-server"
-oci_compute_hostname_label: "{{ oci_compute_name }}"
+# Hostname of the VM (DNS label in the subnet). "" = oci_compute_name, lowercased.
+oci_compute_hostname_label: ""
+# Display name of the primary VNIC. "" = <oci_compute_name>-vnic.
+oci_compute_vnic_name: ""
+# Fixed private IP inside the subnet. "" = assigned by OCI.
+oci_compute_private_ip_address: ""
 oci_compute_shape: "VM.Standard.A1.Flex"
 oci_compute_ocpus: 2
 oci_compute_memory_gb: 12

@@ -1,0 +1,8 @@
+---
+# =============================================================================
+# controller_vars.yml
+# Loaded on the OCI API host only. Not a UI input.
+# =============================================================================
+
+# Use the controller Python that has the OCI SDK installed
+ansible_python_interpreter: "{{ ansible_playbook_python }}"

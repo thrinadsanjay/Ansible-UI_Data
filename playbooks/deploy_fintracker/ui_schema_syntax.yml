@@ -1,0 +1,215 @@
+---
+# UI Schema Template - Comprehensive Field Type Reference
+# This file defines the form fields displayed in the UI when executing the playbook
+# Copy and modify examples below for your use case
+
+# ============================================================================
+# BASIC FIELDS - Shown by default
+# ============================================================================
+fields:
+  # Text Input - Single line string
+  - name: service_name
+    type: text
+    label: "Service Name"
+    description: "Name of the service to configure"
+    required: true
+    placeholder: "my-service"
+  
+  # Number Input - Numeric values
+  - name: port_number
+    type: number
+    label: "Port Number"
+    description: "Port on which service will listen"
+    required: false
+    placeholder: "8080"
+  
+  # Select Dropdown - Choose from predefined options
+  - name: environment
+    type: select
+    label: "Environment"
+    description: "Target environment for deployment"
+    required: true
+    options:
+      - dev
+      - staging
+      - production
+  
+  # Checkbox - Boolean true/false
+  - name: enable_ssl
+    type: checkbox
+    label: "Enable SSL"
+    description: "Enable SSL/TLS encryption"
+    required: false
+  
+  # Password - Masked input for sensitive data
+  - name: admin_password
+    type: password
+    label: "Admin Password"
+    description: "Password for admin user"
+    required: true
+    placeholder: "Enter secure password"
+  
+  # Textarea - Multi-line text input
+  - name: configuration_content
+    type: textarea
+    label: "Configuration Content"
+    description: "Custom configuration content (multi-line)"
+    required: false
+    placeholder: "Enter configuration here..."
+  
+  # Vault - Select secret from Ansible Vault
+  - name: api_secret
+    type: vault
+    label: "API Secret Key"
+    description: "Secret key stored in Ansible Vault"
+    required: true
+
+# ============================================================================
+# ADVANCED FIELDS - Collapsed by default, shown in "Advanced Options" section
+# ============================================================================
+advanced_fields:
+  # Advanced Text Fields
+  - name: custom_user
+    type: text
+    label: "Custom User"
+    description: "Override default service user"
+    required: false
+    placeholder: "serviceuser"
+  
+  - name: working_directory
+    type: text
+    label: "Working Directory"
+    description: "Working directory for the service"
+    required: false
+    placeholder: "/opt/service"
+  
+  # Advanced Number Fields
+  - name: timeout_seconds
+    type: number
+    label: "Timeout (seconds)"
+    description: "Service timeout in seconds"
+    required: false
+    placeholder: "30"
+  
+  - name: max_connections
+    type: number
+    label: "Max Connections"
+    description: "Maximum number of concurrent connections"
+    required: false
+    placeholder: "100"
+  
+  # Advanced Select Fields
+  - name: restart_policy
+    type: select
+    label: "Restart Policy"
+    description: "Service restart behavior"
+    required: false
+    options:
+      - always
+      - on-failure
+      - unless-stopped
+      - "no"
+  
+  - name: log_level
+    type: select
+    label: "Log Level"
+    description: "Logging verbosity level"
+    required: false
+    options:
+      - DEBUG
+      - INFO
+      - WARNING
+      - ERROR
+      - CRITICAL
+  
+  # Advanced Boolean Flags
+  - name: enable_monitoring
+    type: checkbox
+    label: "Enable Monitoring"
+    description: "Enable service monitoring and health checks"
+    required: false
+  
+  - name: enable_backup
+    type: checkbox
+    label: "Enable Automatic Backup"
+    description: "Enable automatic backup for service data"
+    required: false
+  
+  - name: dry_run
+    type: checkbox
+    label: "Dry Run Mode"
+    description: "Simulate changes without applying them"
+    required: false
+  
+  # Advanced Textarea Fields
+  - name: environment_variables
+    type: textarea
+    label: "Environment Variables"
+    description: "Additional environment variables (KEY=VALUE format, one per line)"
+    required: false
+    placeholder: |
+      VAR1=value1
+      VAR2=value2
+  
+  - name: custom_script
+    type: textarea
+    label: "Custom Pre-Start Script"
+    description: "Shell script to execute before starting service"
+    required: false
+    placeholder: |
+      #!/bin/bash
+      echo "Pre-start script"
+  
+  # Advanced Vault Fields
+  - name: database_password
+    type: vault
+    label: "Database Password"
+    description: "Database password from vault"
+    required: false
+  
+  - name: tls_certificate
+    type: vault
+    label: "TLS Certificate"
+    description: "TLS certificate from vault"
+    required: false
+
+# ============================================================================
+# FIELD TYPE REFERENCE
+# ============================================================================
+# Supported field types:
+#
+# 1. text       - Single-line text input
+# 2. number     - Numeric input (integers/decimals)
+# 3. password   - Masked text input
+# 4. textarea   - Multi-line text input
+# 5. checkbox   - Boolean toggle (true/false)
+# 6. select     - Dropdown with predefined options
+# 7. vault      - Secret selection from Ansible Vault
+#
+# Field properties:
+# - name:         Variable name (required, must be valid Python identifier)
+# - type:         Field type from above (required)
+# - label:        Display label in UI (optional, defaults to name)
+# - description:  Help text shown below field (optional)
+# - required:     Whether field must be filled (optional, default: false)
+# - placeholder:  Placeholder text (optional, for text/number/textarea)
+# - options:      Array of choices (required for select type)
+#
+# ============================================================================
+# USAGE PATTERNS
+# ============================================================================
+#
+# Pattern 1: Basic/Advanced Separation
+# - Put frequently-used fields in "fields" section
+# - Put expert/optional fields in "advanced_fields" section
+# - Advanced fields appear in collapsible "Advanced Options" section
+#
+# Pattern 2: All Fields Basic (no advanced section)
+# - Only define "fields" section
+# - Omit "advanced_fields" entirely
+#
+# Pattern 3: Conditional Requirements
+# - Mark critical fields as required: true
+# - Leave optional fields with required: false or omit property
+#
+# ============================================================================

@@ -2,11 +2,13 @@
 # --- Required (no safe default) ---------------------------------------------
 oci_compartment_id: ""
 # OCI Certificates service certificate for the HTTPS listener (ocid1.certificate...).
+# Required only when oci_lb_https_enabled is true.
 oci_lb_certificate_ocid: ""
 # Inputs published by oci_network and oci_compute when they run earlier in the play.
 oci_lb_subnet_id: "{{ oci_public_subnet_id | default('') }}"
-# Always the private IP: the backend is reached over the VCN, never the Internet.
-oci_lb_backend_ip_address: "{{ oci_compute_private_ip | default('') }}"
+# Private IPs of the backends: they are reached over the VCN, never the Internet.
+# Defaults to the instance created by oci_compute earlier in the same play.
+oci_lb_backend_ip_addresses: "{{ [oci_compute_private_ip] if oci_compute_private_ip is defined else [] }}"
 
 # --- Load Balancer -----------------------------------------------------------
 oci_lb_name: "app-lb"
@@ -17,6 +19,8 @@ oci_lb_max_bandwidth_mbps: 10
 oci_lb_backend_set_name: "app_backend_set"
 oci_lb_backend_policy: "ROUND_ROBIN"
 oci_lb_backend_port: 8000
+# HTTP checks request oci_lb_health_check_path; TCP only opens a connection.
+oci_lb_health_check_protocol: "HTTP"
 oci_lb_health_check_path: "/health"
 oci_lb_health_check_return_code: 200
 oci_lb_health_check_interval_ms: 10000
@@ -24,6 +28,8 @@ oci_lb_health_check_timeout_ms: 3000
 oci_lb_health_check_retries: 3
 
 # --- Listeners ---------------------------------------------------------------
+# false = HTTP listener only (no certificate needed, no redirect).
+oci_lb_https_enabled: true
 oci_lb_https_listener_name: "https_listener"
 oci_lb_https_port: 443
 oci_lb_http_listener_name: "http_listener"

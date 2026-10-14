@@ -18,7 +18,9 @@
           query: "{query}"
         response_code: 301
     state: present
-  when: oci_lb_http_redirect_to_https | bool
+  when:
+    - oci_lb_https_enabled | bool
+    - oci_lb_http_redirect_to_https | bool
 
 # TLS terminates here with the supplied certificate; traffic to the backend is
 # plain HTTP inside the VCN.
@@ -37,6 +39,7 @@
       server_order_preference: ENABLED
       verify_peer_certificate: false
     state: present
+  when: oci_lb_https_enabled | bool
 
 - name: "Ensure HTTP listener exists: {{ oci_lb_http_listener_name }}"
   oracle.oci.oci_loadbalancer_listener:
@@ -45,5 +48,7 @@
     default_backend_set_name: "{{ oci_lb_backend_set_name }}"
     port: "{{ oci_lb_http_port | int }}"
     protocol: "HTTP"
-    rule_set_names: "{{ [oci_lb_redirect_rule_set_name] if oci_lb_http_redirect_to_https | bool else [] }}"
+    rule_set_names: >-
+      {{ [oci_lb_redirect_rule_set_name]
+         if oci_lb_https_enabled | bool and oci_lb_http_redirect_to_https | bool else [] }}
     state: present
