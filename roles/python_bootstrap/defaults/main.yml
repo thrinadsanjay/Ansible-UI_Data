@@ -1,0 +1,9 @@
+---
+# Oldest target Python that the controller's ansible-core can manage
+# (ansible-core 2.17+ needs 3.8 or newer on managed hosts).
+python_bootstrap_min_version: "3.8"
+
+# Oracle Linux / RHEL 7 only ship Python 3.6: install this Software Collection instead.
+python_bootstrap_el7_package: rh-python38-python
+python_bootstrap_el7_repo: ol7_software_collections
+python_bootstrap_el7_interpreter: /opt/rh/rh-python38/root/usr/bin/python3.8

@@ -1,0 +1,53 @@
+---
+# Find (or, on EL7, install) a Python new enough for ansible-core and use it for
+# the rest of the run. Runs with gather_facts: false and only the raw module,
+# because modules — fact gathering included — cannot run on an older Python.
+# Local connections (the controller itself) are left alone.
+
+- name: Prepare Python on the target
+  when: ansible_connection | default('ssh') != 'local'
+  block:
+
+    - name: Look for a usable Python {{ python_bootstrap_min_version }}+
+      ansible.builtin.raw: |
+        min="{{ python_bootstrap_min_version }}"
+        for p in python3.13 python3.12 python3.11 python3.10 python3.9 python3.8 python3 \
+                 /usr/libexec/platform-python {{ python_bootstrap_el7_interpreter }}; do
+          path=$(command -v "$p" 2>/dev/null) || continue
+          if "$path" -c "import sys; sys.exit(0 if sys.version_info >= tuple(int(x) for x in '$min'.split('.')) else 1)" 2>/dev/null; then
+            echo "FOUND:$path"; exit 0
+          fi
+        done
+        echo "NONE"
+      register: python_bootstrap_probe
+      changed_when: false
+
+    - name: Install Python 3.8 from Software Collections (Oracle Linux / RHEL 7)
+      ansible.builtin.raw: |
+        set -e
+        if ! grep -qs ' release 7' /etc/oracle-release /etc/redhat-release; then
+          echo "UNSUPPORTED: $(cat /etc/os-release 2>/dev/null | grep ^PRETTY_NAME= | cut -d= -f2)"; exit 3
+        fi
+        if ! yum -q repolist enabled 2>/dev/null | grep -q '^{{ python_bootstrap_el7_repo }}'; then
+          yum install -y -q oracle-softwarecollection-release-el7 || true
+          yum-config-manager --enable {{ python_bootstrap_el7_repo }} >/dev/null 2>&1 || true
+        fi
+        yum install -y -q {{ python_bootstrap_el7_package }}
+        test -x {{ python_bootstrap_el7_interpreter }}
+        echo "INSTALLED"
+      become: true
+      register: python_bootstrap_install
+      when: "'NONE' in python_bootstrap_probe.stdout"
+      changed_when: "'INSTALLED' in python_bootstrap_install.stdout"
+      failed_when: python_bootstrap_install.rc != 0
+
+    - name: Use the Python found or installed for the rest of this run
+      ansible.builtin.set_fact:
+        ansible_python_interpreter: >-
+          {{ (python_bootstrap_probe.stdout | regex_search('FOUND:(\S+)', '\1') | first)
+             if 'FOUND:' in python_bootstrap_probe.stdout
+             else python_bootstrap_el7_interpreter }}
+
+    - name: Show the interpreter in use
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }} uses {{ ansible_python_interpreter }}"

@@ -6,6 +6,14 @@
 # Author: Sanjay Ch
 # =============================================================================
 
+# Hosts with an older Python (Oracle Linux 7 ships 3.6) get Python 3.8 first:
+# ansible-core cannot gather facts or run modules on Python < 3.8.
+- name: Prepare Python for Ansible
+  hosts: "{{ target_hosts | default('') }}"
+  gather_facts: false
+  roles:
+    - python_bootstrap
+
 - name: Deploy FinTracker - Main Playbook
 
   hosts: "{{ target_hosts }}"
